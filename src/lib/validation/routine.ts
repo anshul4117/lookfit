@@ -168,3 +168,14 @@ export const generateRoutineSchema = z
   .strict();
 
 export type GenerateRoutineInput = z.infer<typeof generateRoutineSchema>;
+
+/**
+ * Schema for archiving a routine.
+ */
+export const archiveRoutineSchema = z
+  .object({
+    id: z.string().uuid("Invalid routine ID"),
+  })
+  .strict();
+
+export type ArchiveRoutineInput = z.infer<typeof archiveRoutineSchema>;
