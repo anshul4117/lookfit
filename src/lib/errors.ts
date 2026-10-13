@@ -94,6 +94,7 @@ const POSTGRES_CODE_MAP: Record<string, { code: ActionErrorCode; message: string
   "55000": { code: "CONFLICT", message: "The operation cannot be completed in the current state" },
   "23505": { code: "CONFLICT", message: "A record with this information already exists" },
   "23503": { code: "NOT_FOUND", message: "Referenced resource does not exist" },
+  "22023": { code: "VALIDATION_ERROR", message: "Invalid input or parameter value" },
   "42501": { code: "NOT_FOUND", message: "Requested resource was not found" }, // Obscure RLS denial as NOT_FOUND
 };
 
