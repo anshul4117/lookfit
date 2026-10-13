@@ -28,19 +28,22 @@ Implemented in `src/lib/planner.ts`.
 
 ```typescript
 export interface PlannerInput {
-  profile: ValidatedProfile;
+  profile: PlannerProfile;
   sessionType: 'morning' | 'evening';
   catalog: ExerciseCatalogItem[];
-  recentSessions: CompletedSessionSummary[];
-  currentRoutineVersion?: number;
 }
+
+export type PlanResult =
+  | { success: true; data: PlannerOutput }
+  | { success: false; error: NoSafePlanError };
 
 export interface PlannerOutput {
   routineName: string;
-  plannerVersion: string;
+  plannerVersion: '1.0.0';
   sessionType: 'morning' | 'evening';
-  exercises: PrescribedRoutineExercise[];
+  exercises: PrescribedExercise[];
   estimatedMinutes: number;
+  safetyNotes: string;
   selectionReasons: string[];
 }
 ```
