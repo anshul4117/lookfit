@@ -186,6 +186,12 @@ isOneToOne: false
               };
               Returns: Database["public"]["Tables"]["routines"]["Row"];
             },
+            "start_workout_session": {
+              Args: {
+                p_routine_id: string;
+              };
+              Returns: Database["public"]["Tables"]["workout_sessions"]["Row"];
+            },
             "complete_workout_session":
 { Args: { "p_duration_seconds"?: number,"p_results": Json,"p_session_id": string }; Returns: {
               "activity_date": string,

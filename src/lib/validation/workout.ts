@@ -15,11 +15,42 @@ export type WorkoutStatus = z.infer<typeof workoutStatusEnum>;
 export const startWorkoutSchema = z
   .object({
     routine_id: z.string().uuid("Invalid routine ID").nullable().optional(),
-    session_type: sessionTypeEnum,
+    session_type: sessionTypeEnum.optional(),
+  })
+  .strict()
+  .refine(
+    (data) => data.routine_id != null || data.session_type != null,
+    {
+      message: "Either routine_id or session_type must be provided to start a workout",
+    }
+  );
+
+export type StartWorkoutInput = z.infer<typeof startWorkoutSchema>;
+
+/**
+ * Schema specifically for starting a workout from a saved routine.
+ * Requires a valid routine_id.
+ */
+export const startRoutineWorkoutSchema = z
+  .object({
+    routine_id: z.string().uuid("Invalid routine ID"),
+    session_type: sessionTypeEnum.optional(),
   })
   .strict();
 
-export type StartWorkoutInput = z.infer<typeof startWorkoutSchema>;
+export type StartRoutineWorkoutInput = z.infer<typeof startRoutineWorkoutSchema>;
+
+/**
+ * Schema for resuming an eligible in-progress workout session.
+ * Strictly disallows client-provided user_id or unexpected parameters.
+ */
+export const resumeWorkoutSchema = z
+  .object({
+    session_id: z.string().uuid("Invalid session ID format"),
+  })
+  .strict();
+
+export type ResumeWorkoutInput = z.infer<typeof resumeWorkoutSchema>;
 
 /**
  * Schema for an individual exercise result submitted upon workout completion.
