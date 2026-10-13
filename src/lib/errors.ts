@@ -11,6 +11,7 @@ export type ActionErrorCode =
   | "FORBIDDEN"
   | "CONFLICT"
   | "RATE_LIMITED"
+  | "NO_SAFE_PLAN"
   | "INTERNAL_ERROR";
 
 export interface ActionError {
@@ -162,6 +163,7 @@ const ACTION_ERROR_CODES: Set<string> = new Set([
   "FORBIDDEN",
   "CONFLICT",
   "RATE_LIMITED",
+  "NO_SAFE_PLAN",
   "INTERNAL_ERROR",
 ]);
 
