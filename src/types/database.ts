@@ -93,14 +93,14 @@ isOneToOne: false
                   ]
                 },"routines": {
                   Row: {
-                    "created_at": string,"estimated_minutes": number,"generated_by": string,"id": string,"name": string,"session_type": Database["public"]['Enums']["session_type"],"status": Database["public"]['Enums']["routine_status"],"updated_at": string,"user_id": string,"version": number
+                    "created_at": string,"estimated_minutes": number,"generated_by": string,"id": string,"name": string,"routine_lineage_id": string,"session_type": Database["public"]['Enums']["session_type"],"status": Database["public"]['Enums']["routine_status"],"updated_at": string,"user_id": string,"version": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"estimated_minutes"?: number,"generated_by"?: string,"id"?: string,"name": string,"session_type": Database["public"]['Enums']["session_type"],"status"?: Database["public"]['Enums']["routine_status"],"updated_at"?: string,"user_id": string,"version"?: number
+                    "created_at"?: string,"estimated_minutes"?: number,"generated_by"?: string,"id"?: string,"name": string,"routine_lineage_id"?: string,"session_type": Database["public"]['Enums']["session_type"],"status"?: Database["public"]['Enums']["routine_status"],"updated_at"?: string,"user_id": string,"version"?: number
                   }
                   Update: {
-                    "created_at"?: string,"estimated_minutes"?: number,"generated_by"?: string,"id"?: string,"name"?: string,"session_type"?: Database["public"]['Enums']["session_type"],"status"?: Database["public"]['Enums']["routine_status"],"updated_at"?: string,"user_id"?: string,"version"?: number
+                    "created_at"?: string,"estimated_minutes"?: number,"generated_by"?: string,"id"?: string,"name"?: string,"routine_lineage_id"?: string,"session_type"?: Database["public"]['Enums']["session_type"],"status"?: Database["public"]['Enums']["routine_status"],"updated_at"?: string,"user_id"?: string,"version"?: number
                   }
                   Relationships: [
                     
@@ -163,6 +163,29 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
+            "archive_routine": {
+              Args: { p_routine_id: string };
+              Returns: Database["public"]["Tables"]["routines"]["Row"];
+            },
+            "create_routine_with_exercises": {
+              Args: {
+                p_name: string;
+                p_session_type: Database["public"]["Enums"]["session_type"];
+                p_estimated_minutes?: number;
+                p_exercises?: Json;
+                p_generated_by?: string;
+              };
+              Returns: Database["public"]["Tables"]["routines"]["Row"];
+            },
+            "update_routine_version": {
+              Args: {
+                p_routine_id: string;
+                p_name?: string | null;
+                p_estimated_minutes?: number | null;
+                p_exercises?: Json;
+              };
+              Returns: Database["public"]["Tables"]["routines"]["Row"];
+            },
             "complete_workout_session":
 { Args: { "p_duration_seconds"?: number,"p_results": Json,"p_session_id": string }; Returns: {
               "activity_date": string,
