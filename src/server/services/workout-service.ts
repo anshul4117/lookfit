@@ -6,6 +6,7 @@ import {
   createErrorResult,
   sanitizeError,
 } from "@/lib/errors";
+import type { CompleteWorkoutInput } from "@/lib/validation/workout";
 
 export type WorkoutSessionRecord = Tables<"workout_sessions">;
 export type SessionExerciseRecord = Tables<"session_exercises">;
@@ -245,6 +246,65 @@ export async function getWorkoutSessionByIdQuery(
       ...session,
       session_exercises: exercises || [],
     });
+  } catch (err) {
+    const sanitized = sanitizeError(err);
+    return createErrorResult(
+      sanitized.code,
+      sanitized.message,
+      sanitized.details
+    );
+  }
+}
+
+/**
+ * Service to atomically complete a workout session using database RPC.
+ *
+ * 1. Derives caller identity from authenticated server session.
+ * 2. Invokes `complete_workout_session` RPC with active duration and exercise results.
+ * 3. Atomic RPC validates session ownership, verifies that session is in progress,
+ *    updates each session_exercise row, and marks workout_session as completed.
+ * 4. Returns the completed session record.
+ */
+export async function completeWorkoutSession(
+  input: CompleteWorkoutInput
+): Promise<ActionResult<WorkoutSessionRecord>> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return createErrorResult("UNAUTHENTICATED", "Authentication required");
+    }
+
+    const { data: completedSession, error: rpcError } = await supabase.rpc(
+      "complete_workout_session",
+      {
+        p_session_id: input.session_id,
+        p_results: input.results,
+        p_duration_seconds: input.duration_seconds ?? undefined,
+      }
+    );
+
+    if (rpcError) {
+      const sanitized = sanitizeError(rpcError);
+      return createErrorResult(
+        sanitized.code,
+        sanitized.message,
+        sanitized.details
+      );
+    }
+
+    if (!completedSession) {
+      return createErrorResult(
+        "INTERNAL_ERROR",
+        "Failed to complete workout session"
+      );
+    }
+
+    return createSuccessResult<WorkoutSessionRecord>(completedSession);
   } catch (err) {
     const sanitized = sanitizeError(err);
     return createErrorResult(
