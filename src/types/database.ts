@@ -157,6 +157,18 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"daily_habits": {
+                  Row: {
+                    "activity_date": string,"completed": boolean,"created_at": string,"habit_key": string,"id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "activity_date": string,"completed"?: boolean,"created_at"?: string,"habit_key": string,"id"?: string,"user_id": string
+                  }
+                  Update: {
+                    "activity_date"?: string,"completed"?: boolean,"created_at"?: string,"habit_key"?: string,"id"?: string,"user_id"?: string
+                  }
+                  Relationships: []
                 }
           }
           Views: {

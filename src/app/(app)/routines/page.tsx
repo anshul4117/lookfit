@@ -43,7 +43,7 @@ export default async function RoutinesPage({ searchParams }: RoutinesPageProps) 
           </div>
           <h1
             id="routines-heading"
-            className="mt-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl"
+            className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl"
           >
             My Workout Routines
           </h1>

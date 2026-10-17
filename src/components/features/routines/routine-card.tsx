@@ -29,12 +29,12 @@ export function RoutineCard({
   return (
     <Card
       id={`routine-card-${routine.id}`}
-      className={`flex flex-col justify-between transition-all hover:shadow-md ${
+      className={`rounded-xl border flex flex-col justify-between transition-all shadow-sm hover:shadow-md ${
         isArchived
           ? "border-slate-200 bg-slate-50/60 opacity-80"
           : isMorning
-          ? "border-amber-200/80 bg-gradient-to-b from-amber-50/20 to-white"
-          : "border-indigo-200/80 bg-gradient-to-b from-indigo-50/20 to-white"
+          ? "border-amber-200/70 bg-white"
+          : "border-sky-200/70 bg-white"
       }`}
     >
       <CardHeader className="space-y-2 pb-3">
@@ -44,13 +44,13 @@ export function RoutineCard({
             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
               isMorning
                 ? "bg-amber-100 text-amber-800"
-                : "bg-indigo-100 text-indigo-800"
+                : "bg-sky-100 text-sky-800"
             }`}
           >
             {isMorning ? (
               <Sun className="h-3.5 w-3.5 text-amber-600" aria-hidden="true" />
             ) : (
-              <Moon className="h-3.5 w-3.5 text-indigo-600" aria-hidden="true" />
+              <Moon className="h-3.5 w-3.5 text-sky-600" aria-hidden="true" />
             )}
             <span className="capitalize">{routine.session_type} Routine</span>
           </span>

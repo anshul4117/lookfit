@@ -52,9 +52,7 @@ export function MedicalDisclaimerCard({ className = "" }: { className?: string }
               experience sharp pain, joint pinching, dizziness, or numbness.
             </li>
             <li>
-              <strong>Upright stance:</strong> Posture improvements may help you stand
-              more upright and reduce slouching, but measured height restoration is
-              variable and not guaranteed.
+              <strong>Upright stance &amp; height:</strong> Posture and strength improvements help an individual stand straighter and decompress the spine, but exercises cannot lengthen bones after growth plates close. Measured standing height changes are variable and not guaranteed.
             </li>
           </ul>
         </div>

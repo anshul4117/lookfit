@@ -27,7 +27,7 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
   return (
     <article
       id={`exercise-card-${exercise.slug}`}
-      className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+      className="group relative flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
     >
       <div>
         {/* Media / Visual Demonstration */}
@@ -47,11 +47,17 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
           {exercise.routine_tags.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700"
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                tag === "evening"
+                  ? "bg-sky-50 text-sky-700"
+                  : tag === "morning"
+                  ? "bg-amber-50 text-amber-700"
+                  : "bg-indigo-50 text-indigo-700"
+              }`}
             >
-              {tag === "morning" && <Sun className="h-3 w-3" aria-hidden="true" />}
-              {tag === "evening" && <Moon className="h-3 w-3" aria-hidden="true" />}
-              {tag === "both" && <Sparkles className="h-3 w-3" aria-hidden="true" />}
+              {tag === "morning" && <Sun className="h-3 w-3 text-amber-600" aria-hidden="true" />}
+              {tag === "evening" && <Moon className="h-3 w-3 text-sky-600" aria-hidden="true" />}
+              {tag === "both" && <Sparkles className="h-3 w-3 text-indigo-600" aria-hidden="true" />}
               <span>{ROUTINE_TAG_LABELS[tag as RoutineTag] || tag}</span>
             </span>
           ))}

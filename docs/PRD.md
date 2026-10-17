@@ -2,15 +2,14 @@
 
 ## 1. Product Overview
 
-A private, responsive web application for home workouts without equipment, positioned as a **Posture & Mobility Fitness App**. It is designed around:
-- Posture awareness and upper-back alignment.
-- Spine mobility, thoracic extension, and gentle rotational flexibility.
-- General lean strength and core stability (anti-extension and lateral endurance).
-- Morning activation routines (20–30 minutes) combining mobility, posture, and bodyweight strength.
-- Evening stretching and relaxation routines (15–25 minutes) focused on down-regulation and decompression.
-- Daily habit tracking that supports healthy workplace ergonomics, posture, and recovery.
+A private, responsive web application for equipment-free home workouts, positioned as a **Lean Physique, Strength & Posture Fitness App**. It is designed around:
+- **Lean Physique & Functional Strength**: Building an athletic, toned body with defined abs and balanced muscle development using progressive bodyweight exercises.
+- **Morning Workout Sessions (20–30 minutes)**: Full-body strength and muscle development (push-ups, squats, lunges, glute and back-strengthening), targeted core and abs training, and posture/mobility activation calibrated to an intermediate level.
+- **Evening Workout Sessions (15–25 minutes)**: Flexibility, spinal mobility, postural alignment, decompression, and restorative recovery, with optional short secondary core/strength routines (not exclusively stretching).
+- **Spine Health & Posture Awareness**: Upper-back alignment, thoracic extension, and rotational mobility to counter sedentary desk work.
+- **Habit Formation**: Daily tracking of restorative sleep, movement breaks, screen ergonomics, and balanced nutrition.
 
-The application provides separate morning and evening sessions, guided exercise execution, workout history, a calendar, streaks, and progress tracking.
+The application provides dual-session morning and evening scheduling, guided interactive exercise execution, immutable workout history, calendar visualization, streaks, and progress tracking.
 
 ## 2. Product Decisions
 
@@ -23,10 +22,12 @@ The application provides separate morning and evening sessions, guided exercise 
 - **Testing**: Vitest + Playwright.
 - **Architecture**: Single-owner default with multi-user-safe data isolation.
 - **Fitness Level**: Intermediate by default; configurable.
-- **Equipment**: Equipment-free by default.
+- **Equipment**: Equipment-free home workouts.
 - **User Profile Target**: Age 23 (configurable during onboarding; never hardcoded in engine). Gender is optional and not required or assumed.
 - **Timezone**: IANA timezone, defaulting to the browser's detected timezone.
-- **Primary Sessions**: Morning (Activation + Posture + Strength) and Evening (Mobility + Stretching + Relaxation).
+- **Primary Sessions**:
+  - Morning (20–30 min): Full-body strength, core/abs, and posture activation.
+  - Evening (15–25 min): Mobility, posture opening, recovery, and optional secondary core blocks.
 - **Scope Exclusions**: No social feeds, no external AI coach, no meal plans, no paid paywalls.
 
 ## 3. Health, Safety and Height Restrictions
@@ -34,25 +35,25 @@ The application provides separate morning and evening sessions, guided exercise 
 1. **Absolute Height Claim Prohibition**:
    - Never claim that exercises increase adult bone height or reopen closed growth plates.
    - Do not promise 1–2 cm of height restoration.
-   - Accurately explain that posture awareness and spinal decompression exercises may help an individual stand more upright, but measured standing height changes are variable, individual, and not guaranteed.
+   - Accurately explain that posture awareness, spinal mobility, and back strengthening exercises help an individual stand straighter and more upright, but exercises cannot lengthen bones after growth plates close. Measured standing height changes are variable, individual, and not guaranteed.
 2. **Medical Disclaimer**:
    - The app does not provide medical diagnoses, clinical assessments, or guaranteed treatment outcomes.
    - Users with existing neck, spinal, or disc conditions must consult a qualified healthcare professional before beginning.
 3. **Pain Stopping Guidance**:
    - Users are explicitly instructed to stop immediately if they experience sharp pain, pinching, numbness, or dizziness.
-   - Mild stretching tension in muscles is normal, but joint or nerve pain is never acceptable.
+   - Mild stretching tension and muscle fatigue are normal; joint, sharp spinal, or nerve pain is never acceptable.
 4. **Hanging and Inversion Equipment**:
    - Inversion tables and bar hanging must never be default routine exercises.
-   - If supported in advanced catalog filters, they must remain strictly optional, carry explicit cautionary disclaimers, and be easy to disable.
+   - Workouts remain completely equipment-free by default.
 
 ## 4. Goals
 
-1. Make today's morning and evening sessions effortless to start, guide, and complete.
-2. Provide clear setup steps, execution instructions, repetitions, durations, and safety notes.
-3. Preserve completed workout history when routines change.
-4. Make consistency understandable through local-time calendar, streaks, and summaries.
-5. Generate predictable routines from explicit, testable, deterministic rules.
-6. Support daily workplace posture and wellness habits through optional tracking.
+1. Deliver structured morning full-body strength/abs workouts and evening mobility/recovery workouts that are effortless to start and follow.
+2. Build functional strength, core stability, and upper-back alignment through progressive bodyweight movements.
+3. Provide clear setup steps, execution instructions, prescribed sets/repetitions, durations, and safety protocols.
+4. Preserve completed workout history and exercise snapshots immutably.
+5. Track consistency, completed sets/reps, exercise progression, and optional body measurements.
+6. Support healthy posture and recovery habits through optional daily habit tracking.
 
 ## 5. Functional Requirements
 
@@ -63,57 +64,57 @@ The application provides separate morning and evening sessions, guided exercise 
 - Enforce RLS on all user-owned tables.
 
 ### FR-02: Onboarding and Settings
-- Collect required age (primary target: age 23) and fitness level.
-- Collect goals: posture, mobility, strength, flexibility, cardio, general fitness.
+- Collect required age (primary target: age 23) and fitness level (default: intermediate).
+- Collect goals: lean athletic physique, defined abs & core, upper-back posture alignment, spinal mobility, functional lower body strength, flexibility & recovery.
 - Collect known exercise limitations and exclusions.
 - Collect optional gender (never mandatory).
 - Collect available session duration (default: 20–30 min morning, 15–25 min evening).
 - Save IANA timezone and schedule preferences.
-- Present explicit medical disclaimer regarding exercise safety and spinal health.
+- Present explicit medical disclaimer regarding exercise safety, upright stance, and spinal health.
 
 ### FR-03: Dashboard
 - Display local date and concise greeting.
-- Morning session card (20–30 min: Activation + Posture + Strength).
-- Evening session card (15–25 min: Gentle Mobility + Stretching + Relaxation).
+- Morning session card (20–30 min: Full-Body Strength + Core/Abs + Posture Activation).
+- Evening session card (15–25 min: Spinal Mobility + Posture Work + Recovery / Optional Core).
 - Session statuses: planned, in progress, completed, or skipped.
 - Current streak and longest streak indicators.
-- Weekly completion summary.
+- Weekly completion summary, tracking active days, sets completed, and training minutes.
 - Direct action to start or resume an eligible session.
 
 ### FR-04: Exercise Library
 Each exercise includes:
 - Stable ID, slug, and name.
-- Category: `posture_spine`, `mobility`, `stretching`, `core`, `push`, `pull`, `legs`, `cardio`.
-- Target areas and goal tags.
+- Category: `strength`, `core` (abs & core), `push` (upper body), `pull` (back & posture), `legs` (lower body), `posture_spine`, `mobility`, `stretching`, `recovery`.
+- Target muscle areas (Chest, Quads, Core/Abs, Upper Back, Glutes, Hamstrings, Thoracic Spine, Hip Flexors).
 - Routine suitability tags: `morning`, `evening`, `both`.
 - Difficulty: beginner, intermediate, advanced.
 - Detailed instructions (setup, execution, breathing).
 - Beginner modifications and regressions.
 - Safety notes and pain warnings.
-- Prescribed sets, repetitions, or duration with rest intervals.
+- Prescribed sets, repetitions, or hold durations with rest intervals.
 
 ### FR-05: Routines & Deterministic Planning
-- Morning Routine (20–30 min):
+- **Morning Routine (20–30 min)**:
   1. Spinal & joint mobility warm-up (`cat-cow`, `thoracic-rotation`, `wall-angels`, `chin-tuck`).
-  2. Posture activation & core stability (`cobra-pose`, `bird-dog`, `forearm-plank`, `glute-bridge`).
-  3. Strength & conditioning block (`push-up`, `bodyweight-squat`, `reverse-lunge`, optional `mock-skipping`).
-  4. Short cool-down.
-- Evening Routine (15–25 min):
-  1. Gentle mobility & spinal release (`child-pose`, `seated-spinal-twist`, `knees-to-chest`).
-  2. Static flexibility & posture opening (`doorway-chest-stretch`, `hamstring-stretch`, `hip-flexor-stretch`, `pigeon-pose` or `figure-four-stretch`).
-  3. Passive restoration & decompression (`sphinx-pose`, `legs-up-the-wall`, `deep-breathing`).
+  2. Core & abs activation (`forearm-plank`, `bird-dog`, `glute-bridge`, `dead-bug`).
+  3. Bodyweight strength block (`push-up`, `bodyweight-squat`, `reverse-lunge`, `cobra-pose`).
+  4. Short recovery cool-down.
+- **Evening Routine (15–25 min)**:
+  1. Spinal decompression & joint release (`child-pose`, `seated-spinal-twist`, `knees-to-chest`).
+  2. Posture opening & static flexibility (`doorway-chest-stretch`, `hamstring-stretch`, `hip-flexor-stretch`, `pigeon-pose`).
+  3. Restorative decompression or secondary core finisher (`sphinx-pose`, `legs-up-the-wall`, `deep-breathing`).
 - Routine exercises have unique sequential positions. Editing a routine creates a new version and never alters past session snapshots.
 
 ### FR-06: Workout Player
-- Interactive countdown and stopwatch timers.
+- Interactive countdown and stopwatch timers with set & rep tracking.
 - Actions: start, pause, resume, next, previous, skip, finish, and cancel.
-- Clear visual display of instructions, beginner modifications, and safety notes.
+- Clear visual display of instructions, target muscle groups, beginner modifications, and safety notes.
 - Starting a workout creates immutable snapshots in `workout_sessions` and `session_exercises`.
 - Completing a workout invokes the atomic `complete_workout_session` RPC function.
 
 ### FR-07: Calendar and History
-- Local-time monthly calendar displaying completed and planned days.
-- Selecting a date reveals historical snapshot details (exercises, actual performance, duration).
+- Local-time monthly calendar displaying completed and planned workout days.
+- Selecting a date reveals historical snapshot details (exercises, sets/reps completed, duration).
 - Historical views read exclusively from immutable snapshot records.
 
 ### FR-08: Streaks
@@ -122,21 +123,21 @@ Each exercise includes:
 - Timezone updates do not retroactively alter historical activity dates.
 
 ### FR-09: Progress Metrics
-- Total completed sessions, active days, and workout minutes.
-- Weekly and monthly completion charts.
-- Optional body measurements (weight, height, notes) strictly optional.
+- Total completed workouts, sets and reps logged, active days, and workout minutes.
+- Weekly and monthly category distributions (Strength & Abs, Posture & Spine, Mobility & Recovery).
+- Optional body measurements (weight, waist notes, posture status).
 
 ### FR-10: Privacy and Data Ownership
 - All user tables enforce RLS (`user_id = auth.uid()`).
 - Composite foreign keys guarantee tenant boundary.
 - Service-role credentials never enter client bundles.
 
-### FR-11: Daily Habit Tracker (Planned)
+### FR-11: Daily Habit Tracker
 Support tracking of daily posture, recovery, and ergonomic habits:
-- **Sleep Target**: 7–8 hours (presented as a general wellness target, not medical prescription).
-- **Movement Breaks**: Prompting movement approximately every 45 minutes of prolonged sitting.
+- **Sleep Target**: 7–8 hours (support tissue repair and spinal decompression).
+- **Movement Breaks**: Prompting movement every 45 minutes of prolonged sitting.
 - **Ergonomic Alignment**: Screen positioned near eye level to counter forward head posture.
-- **Balanced Nutrition**: Protein-containing, balanced nutrition without restrictive diet prescriptions.
+- **Balanced Nutrition**: Protein-containing nutrition supporting muscle recovery without restrictive dieting.
 Habits are optional and trackable alongside workout routines.
 
 ## 6. Non-functional Requirements

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/features/auth/sign-out-button";
+import { DesktopNavigation, MobileBottomNavigation } from "@/components/features/navigation/app-nav";
+import { Settings } from "lucide-react";
 
 export default async function AppLayout({
   children,
@@ -26,64 +28,50 @@ export default async function AppLayout({
           <div className="flex items-center gap-6">
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 font-bold tracking-tight text-slate-900"
+              className="flex items-center gap-2.5 font-bold tracking-tight text-slate-900"
             >
               <span
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-black text-primary-foreground"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-sm font-black text-white shadow-sm"
                 aria-hidden="true"
               >
                 LF
               </span>
-              <span>LookFit</span>
+              <div className="flex flex-col">
+                <span className="text-base font-bold leading-tight">LookFit</span>
+                <span className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase leading-none hidden sm:inline">
+                  Lean Physique &amp; Strength
+                </span>
+              </div>
             </Link>
 
-            <nav className="hidden items-center gap-1 sm:flex" aria-label="Main Navigation">
-              <Link
-                id="nav-dashboard"
-                href="/dashboard"
-                className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[44px] flex items-center"
-              >
-                Dashboard
-              </Link>
-              <Link
-                id="nav-exercises"
-                href="/exercises"
-                className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[44px] flex items-center"
-              >
-                Exercise Library
-              </Link>
-              <Link
-                id="nav-routines"
-                href="/routines"
-                className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[44px] flex items-center"
-              >
-                Routines
-              </Link>
-              <Link
-                id="nav-settings"
-                href="/settings"
-                className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[44px] flex items-center"
-              >
-                Settings
-              </Link>
-            </nav>
+            <DesktopNavigation />
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <span
               id="user-badge"
               className="hidden max-w-xs truncate rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 sm:inline-block"
             >
               {user.email}
             </span>
+            <Link
+              href="/settings"
+              id="mobile-header-settings"
+              className="flex items-center justify-center h-9 w-9 rounded-lg text-slate-600 hover:bg-slate-100 md:hidden"
+              aria-label="Settings & Profile"
+            >
+              <Settings className="h-5 w-5" />
+            </Link>
             <SignOutButton />
           </div>
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
+      <main className="flex-1 px-4 py-8 pb-20 sm:px-6 lg:px-8 md:pb-8">
         <div className="mx-auto max-w-6xl">{children}</div>
       </main>
+
+      <MobileBottomNavigation />
     </div>
   );
 }
