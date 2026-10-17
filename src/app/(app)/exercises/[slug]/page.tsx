@@ -102,7 +102,7 @@ export default async function ExerciseDetailPage({
 
         <h1
           id="exercise-detail-title"
-          className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl"
+          className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl"
         >
           {exercise.name}
         </h1>

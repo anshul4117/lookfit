@@ -782,3 +782,178 @@ describe("generatePlan — Both-tagged exercises", () => {
     expect(result.data.plannerVersion).toBe("1.0.0");
   });
 });
+
+describe("generatePlan — Duplicate Prevention", () => {
+  it("never includes duplicate exercise IDs or slugs in a morning plan", () => {
+    const result = generatePlan({
+      profile: BASE_MORNING_PROFILE,
+      sessionType: "morning",
+      catalog: buildMorningCatalog(),
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const ids = result.data.exercises.map((e) => e.exerciseId);
+    const slugs = result.data.exercises.map((e) => e.slug);
+
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(slugs).size).toBe(slugs.length);
+  });
+
+  it("never includes duplicate exercise IDs or slugs in an evening plan", () => {
+    const result = generatePlan({
+      profile: BASE_EVENING_PROFILE,
+      sessionType: "evening",
+      catalog: buildEveningCatalog(),
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const ids = result.data.exercises.map((e) => e.exerciseId);
+    const slugs = result.data.exercises.map((e) => e.slug);
+
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(slugs).size).toBe(slugs.length);
+  });
+});
+
+describe("generatePlan — Morning Composition & Movement Balancing", () => {
+  it("balances strength movements across push, legs, core, and pull patterns", () => {
+    const fullMorningCatalog: ExerciseCatalogItem[] = [
+      ...buildMorningCatalog(),
+      makeExercise({ slug: "hollow-body-hold", name: "Hollow Body Hold", category: "core", difficulty: "intermediate", routine_tags: ["both"], default_sets: 3, default_duration_seconds: 25 }),
+      makeExercise({ slug: "push-up", name: "Push-Up", category: "push", difficulty: "intermediate", routine_tags: ["both"], default_sets: 3, default_reps: 12 }),
+      makeExercise({ slug: "bodyweight-squat", name: "Bodyweight Squat", category: "legs", difficulty: "intermediate", routine_tags: ["both"], default_sets: 3, default_reps: 12 }),
+      makeExercise({ slug: "prone-w-raise", name: "Prone W Raise", category: "pull", difficulty: "intermediate", routine_tags: ["both"], default_sets: 2, default_reps: 10 }),
+    ];
+
+    const result = generatePlan({
+      profile: { ...BASE_MORNING_PROFILE, fitnessLevel: "intermediate" },
+      sessionType: "morning",
+      catalog: fullMorningCatalog,
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const strengthExercises = result.data.exercises.filter((e) => e.section === "strength");
+    expect(strengthExercises.length).toBeGreaterThanOrEqual(3);
+
+    // Verify key movement categories appear in the plan
+    const allSlugs = result.data.exercises.map((e) => e.slug);
+    expect(allSlugs.some((s) => ["push-up", "incline-knee-push-up"].includes(s))).toBe(true);
+    expect(allSlugs.some((s) => ["bodyweight-squat", "reverse-lunge", "glute-bridge"].includes(s))).toBe(true);
+  });
+
+  it("includes short cool-down centering (deep breathing) at the end of morning sessions", () => {
+    const result = generatePlan({
+      profile: BASE_MORNING_PROFILE,
+      sessionType: "morning",
+      catalog: buildMorningCatalog(),
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const lastExercise = result.data.exercises[result.data.exercises.length - 1];
+    expect(lastExercise.section).toBe("centering");
+    expect(lastExercise.slug).toBe("deep-breathing");
+  });
+});
+
+describe("generatePlan — Evening Core Inclusion & Graceful Fallback", () => {
+  it("includes an optional core exercise when eligible core exercises exist in evening catalog", () => {
+    const eveningWithCoreCatalog: ExerciseCatalogItem[] = [
+      ...buildEveningCatalog(),
+      makeExercise({
+        slug: "bird-dog",
+        name: "Bird-Dog",
+        category: "core",
+        routine_tags: ["both"],
+        default_sets: 2,
+        default_reps: 10,
+      }),
+    ];
+
+    const result = generatePlan({
+      profile: BASE_EVENING_PROFILE,
+      sessionType: "evening",
+      catalog: eveningWithCoreCatalog,
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const sections = result.data.exercises.map((e) => e.section);
+    expect(sections).toContain("core");
+    const slugs = result.data.exercises.map((e) => e.slug);
+    expect(slugs).toContain("bird-dog");
+  });
+
+  it("generates successfully when NO core exercises exist in evening catalog (graceful handling)", () => {
+    // buildEveningCatalog has only mobility, stretching, relaxation (0 core)
+    const result = generatePlan({
+      profile: BASE_EVENING_PROFILE,
+      sessionType: "evening",
+      catalog: buildEveningCatalog(),
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const sections = result.data.exercises.map((e) => e.section);
+    expect(sections).toContain("mobility");
+    expect(sections).toContain("stretching");
+    expect(sections).toContain("relaxation");
+  });
+});
+
+describe("generatePlan — Catalog Expansion Exercises", () => {
+  it("allows selecting new core exercises (hollow-body-hold, bicycle-crunch) for intermediate users", () => {
+    const catalogWithNewExercises: ExerciseCatalogItem[] = [
+      ...buildMorningCatalog(),
+      makeExercise({
+        slug: "hollow-body-hold",
+        name: "Hollow Body Hold",
+        category: "core",
+        difficulty: "intermediate",
+        routine_tags: ["both"],
+        default_sets: 3,
+        default_duration_seconds: 25,
+      }),
+      makeExercise({
+        slug: "bicycle-crunch",
+        name: "Bicycle Crunch",
+        category: "core",
+        difficulty: "intermediate",
+        routine_tags: ["both"],
+        default_sets: 3,
+        default_reps: 12,
+      }),
+      makeExercise({
+        slug: "prone-y-raise",
+        name: "Prone Y Raise",
+        category: "pull",
+        difficulty: "beginner",
+        routine_tags: ["both"],
+        default_sets: 2,
+        default_reps: 10,
+      }),
+    ];
+
+    const result = generatePlan({
+      profile: { ...BASE_MORNING_PROFILE, fitnessLevel: "intermediate" },
+      sessionType: "morning",
+      catalog: catalogWithNewExercises,
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    // Prescribed exercises should be within bounds and valid
+    expect(result.data.estimatedMinutes).toBeGreaterThanOrEqual(20);
+    expect(result.data.estimatedMinutes).toBeLessThanOrEqual(30);
+  });
+});

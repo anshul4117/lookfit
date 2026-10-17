@@ -1,15 +1,14 @@
 # LookFit — Antigravity Agent Guidelines
 
 ## 1. Project Purpose
-**LookFit** is a private, production-grade personal fitness web application positioned as a **Posture & Mobility Fitness App**, focused on:
-- Posture awareness, upper-back alignment, and spinal mobility.
-- Morning activation routines (20–30 min: activation, posture, strength).
-- Evening mobility & stretching routines (15–25 min: decompression, relaxation).
-- Equipment-free home workouts.
-- Mobility and posture habit formation, with optional daily habit tracking (sleep, movement breaks, screen ergonomics, balanced nutrition).
-- Lean-body fitness and core stability.
-- Guided execution with countdown and stopwatch timers.
-- Streak, calendar, and historical progress tracking.
+**LookFit** is a private, production-grade personal fitness web application positioned as a **Lean Physique, Strength & Posture Fitness App**, focused on:
+- Building a lean, athletic physique with defined abs, functional bodyweight strength, and postural alignment.
+- Morning sessions (20–30 min: full-body strength, abs/core, push-ups/squats/lunges/glute/back, and posture activation).
+- Evening sessions (15–25 min: flexibility, spinal mobility, postural opening, decompression, and optional secondary core blocks).
+- Equipment-free home workouts calibrated to an intermediate fitness level.
+- Daily habit tracking (sleep, movement breaks, screen ergonomics, balanced nutrition).
+- Guided execution with countdown, stopwatch, and sets/reps tracking.
+- Streak, calendar, exercise progression, and historical progress tracking.
 - Deterministic, profile-driven routine planning (target profile: age 23, gender optional, no external AI dependency).
 
 ## 2. Technology Stack

@@ -267,7 +267,7 @@ values
 
 ('forearm-plank', 'Forearm Plank',
  'Build anti-extension core endurance for lumbar stability.',
- 'core', array['abdominals','core','shoulders'], array['strength','posture'], array['morning']::text[],
+ 'core', array['abdominals','core','shoulders'], array['strength','posture'], array['both']::text[],
  'intermediate', array[]::text[],
  array['Place forearms on floor with elbows under shoulders.','Extend legs back, balancing on balls of feet, body forming a straight line from head to heels.','Draw belly button toward spine and squeeze glutes lightly.','Breathe steadily for 30 to 45 seconds.'],
  'Beginners: lower knees to mat for a knee plank. Stop before hips sag into lower back.',
@@ -275,7 +275,7 @@ values
 
 ('dead-bug', 'Dead Bug',
  'Train anterior core control while dissociating limb movement from spine.',
- 'core', array['abdominals','core'], array['strength','posture'], array['morning']::text[],
+ 'core', array['abdominals','core'], array['strength','posture'], array['both']::text[],
  'intermediate', array[]::text[],
  array['Lie on back with arms pointing to ceiling and knees bent at 90 degrees above hips.','Maintain gentle contact between lower back and mat.','Slowly lower opposite arm and leg toward floor while maintaining flat back.','Return to start and repeat with opposite limbs for 8 reps per side.'],
  'Only lower limbs as far as you can maintain lower back contact with mat.',
@@ -283,7 +283,7 @@ values
 
 ('side-plank', 'Side Plank',
  'Train lateral core endurance and quadratus lumborum stability.',
- 'core', array['obliques','core','shoulders'], array['strength','general_fitness'], array['morning']::text[],
+ 'core', array['obliques','core','shoulders'], array['strength','general_fitness'], array['both']::text[],
  'intermediate', array[]::text[],
  array['Lie on side, propped on forearm with elbow directly below shoulder.','Lift hips off mat until body forms a straight diagonal line.','Hold for 15-20 seconds with steady breathing, then switch sides.'],
  'Beginners: bend bottom knee 90 degrees for a knee-supported side plank.',
@@ -296,6 +296,30 @@ values
  array['Lie supine on back with hands beside hips, knees bent at 90 degrees.','Use lower abdominals to curl knees gently toward chest, lifting hips slightly.','Lower slowly with control without arching lower back. Complete 10 reps.'],
  'Avoid swinging legs or using momentum. The movement is small and controlled.',
  2, 10, null, 30),
+
+('hollow-body-hold', 'Hollow Body Hold',
+ 'Isometric core hold building deep abdominal compression and pelvic stability.',
+ 'core', array['abdominals','core','hip_flexors'], array['strength','posture'], array['both']::text[],
+ 'intermediate', array[]::text[],
+ array['Lie supine on your back with legs straight and arms extended overhead by ears.','Press lumbar spine firmly into the mat, eliminating any gap between lower back and floor.','Simultaneously lift shoulder blades and straight legs 2 to 4 inches off the floor.','Hold the hollow body position while breathing steadily for 20 to 30 seconds.'],
+ 'Stop immediately if lower back arches off the mat. Beginners: bend knees to 90 degrees or tuck arms by hips to shorten the lever arm.',
+ 3, null, 25, 30),
+
+('bicycle-crunch', 'Bicycle Crunch',
+ 'Dynamic rotational abdominal movement targeting rectus abdominis and internal/external obliques.',
+ 'core', array['abdominals','obliques','core'], array['strength','general_fitness'], array['both']::text[],
+ 'intermediate', array[]::text[],
+ array['Lie on your back with fingertips lightly supporting head and knees bent at 90 degrees.','Elevate shoulder blades slightly off the mat without pulling on the neck.','Extend right leg straight while rotating torso to bring right elbow toward left knee.','Switch sides smoothly in a controlled pedal motion for 12 reps per side.'],
+ 'Do not pull or yank on the neck with hands. Initiate rotation through the ribcage and obliques. Stop if sharp spinal or neck discomfort occurs.',
+ 3, 12, null, 30),
+
+('lying-leg-raises', 'Lying Leg Raise',
+ 'Controlled lower abdominal and hip flexor strengthening with strict pelvic floor bracing.',
+ 'core', array['abdominals','hip_flexors','core'], array['strength','posture'], array['both']::text[],
+ 'intermediate', array[]::text[],
+ array['Lie supine with arms flat at sides and palms pressing lightly into the mat.','Press lower back firmly into the floor and brace core.','With legs together and straight, raise them smoothly until hips reach roughly 90 degrees.','Lower legs slowly under control, stopping just before lower back loses contact with floor. Complete 10 reps.'],
+ 'Do not let the lumbar spine arch away from the floor during lowering. Beginners: bend knees to perform reverse crunches instead. Stop for lower-back strain.',
+ 3, 10, null, 30),
 
 -- =========================================================
 -- Strength: Push, Pull & Legs
@@ -356,6 +380,22 @@ values
  array['Lie face down with elbows bent in a W shape beside shoulders.','Gently lift hands and elbows 1-2 inches off floor while drawing shoulder blades back and down.','Hold 2 seconds, lower slowly. Complete 8 reps.'],
  'Avoid shrugging shoulders toward ears; keep movement subtle.',
  2, 8, null, 30),
+
+('prone-y-raise', 'Prone Y Raise',
+ 'Target the lower trapezius and mid-back stabilizers to counterbalance forward-slumped posture.',
+ 'pull', array['upper_back','shoulders','spine'], array['strength','posture'], array['both']::text[],
+ 'beginner', array[]::text[],
+ array['Lie face down with forehead resting on a small folded towel and arms extended in a 30-degree Y overhead with thumbs pointing up.','Draw shoulder blades gently down and back away from ears.','Lift arms 2 to 3 inches off the mat by engaging the lower trapezius.','Hold for 2 seconds at the top, then lower smoothly with control. Complete 10 reps.'],
+ 'Keep neck relaxed and forehead grounded; do not arch lumbar spine to lift arms. Stop if shoulder pinching occurs.',
+ 2, 10, null, 30),
+
+('doorframe-isometric-row', 'Doorframe Isometric Row',
+ 'Isometric upper-back and rhomboid activation using doorway resistance for upright posture.',
+ 'pull', array['upper_back','rhomboids','biceps','shoulders'], array['strength','posture'], array['both']::text[],
+ 'beginner', array[]::text[],
+ array['Stand facing a sturdy doorframe with feet shoulder-width apart.','Grip both sides of the doorframe firmly with hands at chest height.','Lean back slightly with straight spine and pull chest smoothly toward frame, maintaining a strong isometric contraction for 20 seconds.','Breathe steadily while squeezing shoulder blades together.'],
+ 'Ensure a secure grip and stable stance. Do not jerk back. Stop if sharp wrist, elbow, or shoulder discomfort occurs.',
+ 3, null, 20, 30),
 
 ('bodyweight-squat', 'Bodyweight Squat',
  'Foundational compound lower-body strength and hip-knee-ankle coordination.',

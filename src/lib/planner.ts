@@ -176,6 +176,10 @@ const LIMITATION_EXCLUSION_MAP: ReadonlyArray<{
 // Morning template: preferred slugs per section in priority order
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Morning template: preferred slugs per section in priority order
+// ---------------------------------------------------------------------------
+
 const MORNING_SECTION_PREFERRED: Record<
   "activation" | "posture" | "strength" | "centering",
   ReadonlyArray<string>
@@ -193,29 +197,42 @@ const MORNING_SECTION_PREFERRED: Record<
   posture: [
     "chin-tuck",
     "bird-dog", // preferred over superman per Rule 05
+    "wall-angels",
+    "scapular-push-up",
+    "prone-y-raise",
     "cobra-pose",
     "sphinx-pose",
     "glute-bridge",
-    "forearm-plank",
-    "dead-bug",
-    "scapular-push-up",
     "prone-elbow-pullback",
   ],
   strength: [
+    // Push patterns
     "push-up",
     "incline-knee-push-up",
+    "scapular-push-up",
+    // Lower body / legs
     "bodyweight-squat",
     "reverse-lunge",
+    "split-squat",
+    "glute-bridge",
+    "calf-raise",
+    // Core & defined abs
+    "hollow-body-hold",
+    "forearm-plank",
+    "dead-bug",
+    "bicycle-crunch",
+    "lying-leg-raises",
+    "side-plank",
+    // Upper back & pulling
     "prone-w-raise",
+    "prone-y-raise",
+    "doorframe-isometric-row",
     "self-resisted-row",
+    "prone-elbow-pullback",
+    // Conditioning
     "mock-skipping",
     "march-in-place",
     "low-impact-jumping-jacks",
-    "glute-bridge",
-    "calf-raise",
-    "split-squat",
-    "dead-bug",
-    "side-plank",
   ],
   centering: ["deep-breathing"],
 };
@@ -225,7 +242,7 @@ const MORNING_SECTION_PREFERRED: Record<
 // ---------------------------------------------------------------------------
 
 const EVENING_SECTION_PREFERRED: Record<
-  "mobility" | "stretching" | "relaxation",
+  "mobility" | "stretching" | "core" | "relaxation",
   ReadonlyArray<string>
 > = {
   mobility: [
@@ -247,6 +264,17 @@ const EVENING_SECTION_PREFERRED: Record<
     "calf-stretch",
     "quad-stretch",
     "seated-forward-fold",
+  ],
+  core: [
+    "bird-dog",
+    "glute-bridge",
+    "dead-bug",
+    "forearm-plank",
+    "hollow-body-hold",
+    "bicycle-crunch",
+    "lying-leg-raises",
+    "side-plank",
+    "reverse-crunch",
   ],
   relaxation: ["sphinx-pose", "legs-up-the-wall", "deep-breathing"],
 };
@@ -579,12 +607,12 @@ export function generatePlan(input: PlannerInput): PlanResult {
 
   // --- Step 4: Assemble sections ---
   const usedIds = new Set<string>();
+  const usedSlugs = new Set<string>();
   const exercises: PrescribedExercise[] = [];
   let position = 1;
 
   if (sessionType === "morning") {
-    // Define which exercise categories are appropriate for each morning section.
-    // Strictly no push/pull/cardio/legs in activation to avoid overlap.
+    // Category mapping for morning sections
     const sectionCategoryFilter: Record<
       "activation" | "posture" | "strength" | "centering",
       (ex: ExerciseCatalogItem) => boolean
@@ -616,12 +644,14 @@ export function generatePlan(input: PlannerInput): PlanResult {
         ),
     };
 
+    // Target counts for structured morning session:
+    // 2 activation + 2 posture + 4 balanced strength/core + 1 centering
     const sectionTargetCount: Record<
       "activation" | "posture" | "strength" | "centering",
       number
     > = {
-      activation: 3,
-      posture: 4,
+      activation: 2,
+      posture: 2,
       strength: 4,
       centering: 1,
     };
@@ -635,43 +665,128 @@ export function generatePlan(input: PlannerInput): PlanResult {
       const targetCount = sectionTargetCount[section];
       const categoryFilter = sectionCategoryFilter[section];
 
-      // Pool of eligible exercises appropriate for this section, not yet used.
-      // Exercises explicitly listed in preferred list for this section are always eligible;
-      // fallback exercises must pass categoryFilter.
       const sectionEligible = eligible.filter(
         (ex) =>
           !usedIds.has(ex.id) &&
+          !usedSlugs.has(ex.slug) &&
           (preferred.includes(ex.slug) || categoryFilter(ex))
       );
 
       let added = 0;
-      // Iterate over preferred slugs first, then fall back to alphabetical order
-      const orderedCandidates: ExerciseCatalogItem[] = [];
-      for (const slug of preferred) {
-        const match = sectionEligible.find((ex) => ex.slug === slug);
-        if (match) orderedCandidates.push(match);
+
+      if (section === "strength") {
+        // Balanced full-body strength selection across movement patterns:
+        // 1. Pushing, 2. Legs / Lower Body, 3. Defined Abs & Core, 4. Upper Back / Pull
+        const movementPatterns: ReadonlyArray<{
+          name: string;
+          categories: ReadonlyArray<string>;
+          preferredSlugs: ReadonlyArray<string>;
+        }> = [
+          {
+            name: "push",
+            categories: ["push"],
+            preferredSlugs: ["push-up", "incline-knee-push-up", "scapular-push-up"],
+          },
+          {
+            name: "legs",
+            categories: ["legs"],
+            preferredSlugs: [
+              "bodyweight-squat",
+              "reverse-lunge",
+              "split-squat",
+              "glute-bridge",
+              "calf-raise",
+            ],
+          },
+          {
+            name: "core",
+            categories: ["core"],
+            preferredSlugs: [
+              "hollow-body-hold",
+              "forearm-plank",
+              "dead-bug",
+              "bicycle-crunch",
+              "lying-leg-raises",
+              "side-plank",
+            ],
+          },
+          {
+            name: "pull",
+            categories: ["pull"],
+            preferredSlugs: [
+              "prone-w-raise",
+              "prone-y-raise",
+              "doorframe-isometric-row",
+              "self-resisted-row",
+              "prone-elbow-pullback",
+            ],
+          },
+        ];
+
+        // First pass: try to pick one exercise from each key movement pattern
+        for (const pattern of movementPatterns) {
+          if (added >= targetCount) break;
+
+          const patternCandidate = sectionEligible.find((ex) => {
+            if (usedIds.has(ex.id) || usedSlugs.has(ex.slug)) return false;
+            return (
+              pattern.preferredSlugs.includes(ex.slug) ||
+              pattern.categories.includes(ex.category)
+            );
+          });
+
+          if (patternCandidate) {
+            exercises.push(
+              prescribe(
+                patternCandidate,
+                section,
+                position++,
+                `Selected for ${section} (${pattern.name}): athletic bodyweight movement, within ${profile.fitnessLevel} difficulty.`
+              )
+            );
+            usedIds.add(patternCandidate.id);
+            usedSlugs.add(patternCandidate.slug);
+            added++;
+          }
+        }
       }
-      // Append any remaining eligible exercises not in the preferred list (alphabetical)
-      const preferredIds = new Set(orderedCandidates.map((ex) => ex.id));
-      const fallback = sectionEligible
-        .filter((ex) => !preferredIds.has(ex.id))
-        .sort((a, b) => a.slug.localeCompare(b.slug));
-      orderedCandidates.push(...fallback);
 
-      for (const candidate of orderedCandidates) {
-        if (added >= targetCount) break;
-        if (usedIds.has(candidate.id)) continue;
-
-        exercises.push(
-          prescribe(
-            candidate,
-            section,
-            position++,
-            `Selected for ${section} section: matches ${sessionType} routine tags, within ${profile.fitnessLevel} difficulty.`
+      // Second pass / standard section assembly: fill any remaining target slots
+      if (added < targetCount) {
+        const orderedCandidates: ExerciseCatalogItem[] = [];
+        for (const slug of preferred) {
+          const match = sectionEligible.find((ex) => ex.slug === slug);
+          if (match && !usedIds.has(match.id) && !usedSlugs.has(match.slug)) {
+            orderedCandidates.push(match);
+          }
+        }
+        const preferredIds = new Set(orderedCandidates.map((ex) => ex.id));
+        const fallback = sectionEligible
+          .filter(
+            (ex) =>
+              !preferredIds.has(ex.id) &&
+              !usedIds.has(ex.id) &&
+              !usedSlugs.has(ex.slug)
           )
-        );
-        usedIds.add(candidate.id);
-        added++;
+          .sort((a, b) => a.slug.localeCompare(b.slug));
+        orderedCandidates.push(...fallback);
+
+        for (const candidate of orderedCandidates) {
+          if (added >= targetCount) break;
+          if (usedIds.has(candidate.id) || usedSlugs.has(candidate.slug)) continue;
+
+          exercises.push(
+            prescribe(
+              candidate,
+              section,
+              position++,
+              `Selected for ${section} section: matches ${sessionType} routine tags, within ${profile.fitnessLevel} difficulty.`
+            )
+          );
+          usedIds.add(candidate.id);
+          usedSlugs.add(candidate.slug);
+          added++;
+        }
       }
 
       const isMandatory = ["activation", "posture", "strength"].includes(
@@ -684,9 +799,9 @@ export function generatePlan(input: PlannerInput): PlanResult {
       }
     }
   } else {
-    // Evening routine — no cross-contamination between section pools
+    // Evening routine — mobility, stretching, optional core block, relaxation
     const sectionCategoryFilter: Record<
-      "mobility" | "stretching" | "relaxation",
+      "mobility" | "stretching" | "core" | "relaxation",
       (ex: ExerciseCatalogItem) => boolean
     > = {
       mobility: (ex) =>
@@ -697,6 +812,8 @@ export function generatePlan(input: PlannerInput): PlanResult {
         ["stretching", "posture_spine", "posture", "mobility"].includes(
           ex.category
         ),
+      core: (ex) =>
+        ["core", "legs", "posture_spine", "pull"].includes(ex.category),
       relaxation: (ex) =>
         ex.slug === "deep-breathing" ||
         ex.slug === "legs-up-the-wall" ||
@@ -704,21 +821,23 @@ export function generatePlan(input: PlannerInput): PlanResult {
     };
 
     const sectionTargetCount: Record<
-      "mobility" | "stretching" | "relaxation",
+      "mobility" | "stretching" | "core" | "relaxation",
       number
     > = {
-      mobility: 3,
-      stretching: 4,
-      relaxation: 3,
+      mobility: 2,
+      stretching: 2,
+      core: 1, // Optional core/strength recovery block
+      relaxation: 2,
     };
 
-    const requiredSections: Array<"mobility" | "stretching" | "relaxation"> = [
+    const eveningSections: Array<"mobility" | "stretching" | "core" | "relaxation"> = [
       "mobility",
       "stretching",
+      "core",
       "relaxation",
     ];
 
-    for (const section of requiredSections) {
+    for (const section of eveningSections) {
       const preferred = EVENING_SECTION_PREFERRED[section];
       const targetCount = sectionTargetCount[section];
       const categoryFilter = sectionCategoryFilter[section];
@@ -726,6 +845,7 @@ export function generatePlan(input: PlannerInput): PlanResult {
       const sectionEligible = eligible.filter(
         (ex) =>
           !usedIds.has(ex.id) &&
+          !usedSlugs.has(ex.slug) &&
           (preferred.includes(ex.slug) || categoryFilter(ex))
       );
 
@@ -733,17 +853,24 @@ export function generatePlan(input: PlannerInput): PlanResult {
       const orderedCandidates: ExerciseCatalogItem[] = [];
       for (const slug of preferred) {
         const match = sectionEligible.find((ex) => ex.slug === slug);
-        if (match) orderedCandidates.push(match);
+        if (match && !usedIds.has(match.id) && !usedSlugs.has(match.slug)) {
+          orderedCandidates.push(match);
+        }
       }
       const preferredIds = new Set(orderedCandidates.map((ex) => ex.id));
       const fallback = sectionEligible
-        .filter((ex) => !preferredIds.has(ex.id))
+        .filter(
+          (ex) =>
+            !preferredIds.has(ex.id) &&
+            !usedIds.has(ex.id) &&
+            !usedSlugs.has(ex.slug)
+        )
         .sort((a, b) => a.slug.localeCompare(b.slug));
       orderedCandidates.push(...fallback);
 
       for (const candidate of orderedCandidates) {
         if (added >= targetCount) break;
-        if (usedIds.has(candidate.id)) continue;
+        if (usedIds.has(candidate.id) || usedSlugs.has(candidate.slug)) continue;
 
         exercises.push(
           prescribe(
@@ -754,17 +881,22 @@ export function generatePlan(input: PlannerInput): PlanResult {
           )
         );
         usedIds.add(candidate.id);
+        usedSlugs.add(candidate.slug);
         added++;
       }
 
-      if (added === 0) {
+      // Mandatory evening sections are mobility, stretching, and relaxation.
+      // core is strictly optional; failure is not raised if 0 core exercises exist.
+      const isMandatory = ["mobility", "stretching", "relaxation"].includes(
+        section
+      );
+      if (isMandatory && added === 0) {
         reasons.push(
           `Required evening section "${section}" has no eligible exercises after applying all filters.`
         );
       }
     }
   }
-
 
   // --- Step 5: Check mandatory section coverage ---
   if (reasons.length > 0) {
@@ -792,7 +924,85 @@ export function generatePlan(input: PlannerInput): PlanResult {
     };
   }
 
-  // --- Step 6: Check duration budget ---
+  // --- Step 6: Duration Budget Adjustment & Verification ---
+  const effectiveMax = Math.min(
+    profile.availableMinutes,
+    bounds.maxMinutes
+  );
+
+  let totalSeconds = exercises.reduce((sum, ex) => sum + ex.estimatedSeconds, 0);
+  let estMinutes = Math.round((totalSeconds / 60) * 10) / 10;
+
+  // If estimated duration is below the session minimum, add remaining eligible candidates
+  // deterministically until minMinutes is satisfied (up to effectiveMax).
+  if (estMinutes < bounds.minMinutes) {
+    const remainingEligible = eligible
+      .filter((ex) => !usedIds.has(ex.id) && !usedSlugs.has(ex.slug))
+      .sort((a, b) => a.slug.localeCompare(b.slug));
+
+    for (const candidate of remainingEligible) {
+      if (estMinutes >= bounds.minMinutes) break;
+
+      const sets = candidate.default_sets ?? 2;
+      const candidateSeconds = estimateExerciseDurationSeconds(candidate, sets);
+      const prospectiveMinutes =
+        Math.round(((totalSeconds + candidateSeconds) / 60) * 10) / 10;
+
+      if (prospectiveMinutes <= effectiveMax) {
+        const fillSection: RoutineSection =
+          sessionType === "morning" ? "strength" : "stretching";
+
+        exercises.push(
+          prescribe(
+            candidate,
+            fillSection,
+            position++,
+            `Added to meet minimum ${sessionType} duration budget of ${bounds.minMinutes} min.`
+          )
+        );
+        usedIds.add(candidate.id);
+        usedSlugs.add(candidate.slug);
+        totalSeconds += candidateSeconds;
+        estMinutes = prospectiveMinutes;
+      }
+    }
+  }
+
+  // If estimated duration exceeds effectiveMax, remove optional/extra exercises
+  // from back to front, ensuring at least one exercise remains in mandatory sections.
+  if (estMinutes > effectiveMax && exercises.length > 3) {
+    for (let i = exercises.length - 1; i >= 0; i--) {
+      if (estMinutes <= effectiveMax) break;
+
+      const ex = exercises[i];
+      // Keep at least one exercise in mandatory sections
+      const countInSection = exercises.filter((e) => e.section === ex.section).length;
+      const canRemove =
+        (sessionType === "morning" && (ex.section === "strength" || ex.section === "posture") && countInSection > 1) ||
+        (sessionType === "evening" && (ex.section === "core" || countInSection > 1));
+
+      if (canRemove) {
+        totalSeconds -= ex.estimatedSeconds;
+        estMinutes = Math.round((totalSeconds / 60) * 10) / 10;
+        exercises.splice(i, 1);
+        usedIds.delete(ex.exerciseId);
+        usedSlugs.delete(ex.slug);
+      }
+    }
+  }
+
+  // Ensure centering (cool-down) always remains the final exercise in the routine
+  const centeringIdx = exercises.findIndex((e) => e.section === "centering");
+  if (centeringIdx !== -1 && centeringIdx !== exercises.length - 1) {
+    const [centeringEx] = exercises.splice(centeringIdx, 1);
+    exercises.push(centeringEx);
+  }
+
+  // Ensure positions are strictly sequential 1..N
+  exercises.forEach((ex, idx) => {
+    ex.position = idx + 1;
+  });
+
   const { withinBounds, estimatedMinutes, reasons: durationReasons } =
     checkDurationBudget(exercises, sessionType, profile.availableMinutes);
 
@@ -810,8 +1020,8 @@ export function generatePlan(input: PlannerInput): PlanResult {
   // --- Step 7: Build output ---
   const routineName =
     sessionType === "morning"
-      ? "Morning Posture & Activation Routine"
-      : "Evening Spinal Decompression & Relaxation";
+      ? "Morning Strength, Abs & Posture Routine"
+      : "Evening Mobility, Posture & Recovery Routine";
 
   const selectionReasons = [
     `Session type: ${sessionType}`,

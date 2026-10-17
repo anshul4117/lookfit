@@ -126,7 +126,7 @@ export default async function RoutineDetailPage({
 
           <h1
             id="routine-detail-name"
-            className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl"
+            className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl"
           >
             {routine.name}
           </h1>

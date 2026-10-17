@@ -62,10 +62,10 @@ export function RoutineGeneratePanel() {
   };
 
   return (
-    <Card className="border-slate-200/90 bg-gradient-to-br from-slate-50 to-white shadow-sm">
+    <Card className="border-slate-200 bg-white shadow-sm rounded-xl">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-white">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white">
             <Sparkles className="h-4 w-4" aria-hidden="true" />
           </span>
           <div>
@@ -86,10 +86,10 @@ export function RoutineGeneratePanel() {
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 font-bold text-amber-950 text-sm">
                 <Sun className="h-4 w-4 text-amber-600" aria-hidden="true" />
-                <span>Morning Routine</span>
+                <span>Morning Strength &amp; Core</span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                20–30 min: Spine activation, posture awareness, and strength conditioning.
+                20–30 min: Full-body bodyweight strength, abs development, and spinal posture activation.
               </p>
             </div>
             <Button
@@ -115,14 +115,14 @@ export function RoutineGeneratePanel() {
           </div>
 
           {/* Evening Generator */}
-          <div className="flex flex-col justify-between rounded-xl border border-indigo-200/80 bg-indigo-50/30 p-4 space-y-3">
+          <div className="flex flex-col justify-between rounded-xl border border-sky-200/80 bg-sky-50/40 p-4 space-y-3">
             <div className="space-y-1">
-              <div className="flex items-center gap-1.5 font-bold text-indigo-950 text-sm">
-                <Moon className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-                <span>Evening Routine</span>
+              <div className="flex items-center gap-1.5 font-bold text-sky-950 text-sm">
+                <Moon className="h-4 w-4 text-sky-600" aria-hidden="true" />
+                <span>Evening Mobility &amp; Recovery</span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                15–25 min: Spinal decompression, static stretching, and nervous system relaxation.
+                15–25 min: Spinal decompression, hip &amp; chest flexibility, postural recovery, and core.
               </p>
             </div>
             <Button
@@ -131,7 +131,7 @@ export function RoutineGeneratePanel() {
               size="sm"
               disabled={loadingType !== null}
               onClick={() => handleGenerate("evening")}
-              className="w-full font-semibold border-indigo-300 text-indigo-900 hover:bg-indigo-100/80 gap-1.5"
+              className="w-full font-semibold border-sky-300 text-sky-900 hover:bg-sky-100/80 gap-1.5"
             >
               {loadingType === "evening" ? (
                 <>

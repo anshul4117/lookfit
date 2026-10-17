@@ -69,7 +69,7 @@ export default async function RoutineEditPage({ params }: RoutineEditPageProps) 
       <div>
         <h1
           id="routine-edit-heading"
-          className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl"
+          className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl"
         >
           Edit Routine: {routine.name}
         </h1>

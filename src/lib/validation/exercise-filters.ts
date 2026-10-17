@@ -25,22 +25,22 @@ export type FitnessLevel = (typeof FITNESS_LEVELS)[number];
  */
 export const CATEGORY_LABELS: Record<ExerciseCategory, string> = {
   posture_spine: "Posture & Spine",
-  mobility: "Mobility",
-  stretching: "Stretching & Flexibility",
-  posture: "Posture Alignment",
-  core: "Core Stability",
-  push: "Upper Push",
-  pull: "Upper Pull",
-  legs: "Lower Body",
-  cardio: "Cardio & Activation",
+  mobility: "Joint & Spine Mobility",
+  stretching: "Flexibility & Recovery",
+  posture: "Upper-Back Posture",
+  core: "Abs & Core Strength",
+  push: "Upper Body Push",
+  pull: "Upper Body Pull",
+  legs: "Lower Body & Glutes",
+  cardio: "Low-Impact Conditioning",
 };
 
 /**
  * Human-readable display labels for routine suitability.
  */
 export const ROUTINE_TAG_LABELS: Record<RoutineTag, string> = {
-  morning: "Morning Activation",
-  evening: "Evening Relaxation",
+  morning: "Morning Strength & Activation",
+  evening: "Evening Mobility & Recovery",
   both: "Morning & Evening",
 };
 

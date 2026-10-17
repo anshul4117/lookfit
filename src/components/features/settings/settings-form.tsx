@@ -23,12 +23,12 @@ type ProfileRecord = Tables<"profiles">;
 type FitnessLevel = "beginner" | "intermediate" | "advanced";
 
 const ALL_GOALS = [
+  { id: "strength", label: "Lean Athletic Physique & Bodyweight Strength" },
+  { id: "general_fitness", label: "Defined Abs & Core Muscle Development" },
   { id: "posture", label: "Upper-Back Posture & Alignment" },
   { id: "mobility", label: "Spinal Mobility & Decompression" },
-  { id: "strength", label: "Core Stability & Posture Strength" },
-  { id: "general_fitness", label: "General Lean Fitness" },
-  { id: "flexibility", label: "Hip & Hamstring Flexibility" },
-  { id: "cardio", label: "Low-Impact Cardio" },
+  { id: "flexibility", label: "Hip, Chest & Hamstring Flexibility" },
+  { id: "cardio", label: "Low-Impact Conditioning & Core Activation" },
 ] as const;
 
 const COMMON_LIMITATIONS = [

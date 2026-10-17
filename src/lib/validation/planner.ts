@@ -21,6 +21,7 @@ export type MorningSection = z.infer<typeof morningSectionEnum>;
 export const eveningSectionEnum = z.enum([
   "mobility",
   "stretching",
+  "core",
   "relaxation",
 ]);
 export type EveningSection = z.infer<typeof eveningSectionEnum>;
