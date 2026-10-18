@@ -100,6 +100,7 @@ describe("Middleware Route Matching & Open Redirect Protection Tests", () => {
     expect(isProtectedRoute("/progress")).toBe(true);
     expect(isProtectedRoute("/settings")).toBe(true);
     expect(isProtectedRoute("/routines")).toBe(true);
+    expect(isProtectedRoute("/habits")).toBe(true);
 
     // Non-protected routes
     expect(isProtectedRoute("/")).toBe(false);
