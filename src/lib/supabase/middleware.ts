@@ -11,6 +11,7 @@ const PROTECTED_ROUTE_SEGMENTS = [
   "progress",
   "settings",
   "routines",
+  "habits",
 ] as const;
 
 const AUTH_ROUTE_SEGMENTS = ["login", "register"] as const;

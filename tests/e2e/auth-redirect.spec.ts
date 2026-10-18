@@ -24,6 +24,17 @@ test.describe("Protected Routes and Authentication Redirects", () => {
     await expect(heading).toBeVisible();
   });
 
+  test("redirects unauthenticated user accessing /habits to /login with redirectTo", async ({
+    page,
+  }) => {
+    await page.goto("/habits");
+
+    // Must be redirected to /login with query param preserved
+    await expect(page).toHaveURL(/\/login\?redirectTo=%2Fhabits/);
+    const heading = page.locator("#login-heading");
+    await expect(heading).toContainText("Sign In to LookFit");
+  });
+
   test("allows unauthenticated access to the public landing page", async ({
     page,
   }) => {

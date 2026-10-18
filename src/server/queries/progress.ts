@@ -94,9 +94,11 @@ export async function getProgressDataQuery(): Promise<ActionResult<ProgressData>
     const { currentStreak } = calculateStreaks(activityDates, todayDate);
 
     // 3. Compute Weekly Chart Data (current week Monday through Sunday)
-    const todayObj = new Date();
+    // Derive weekday from timezone-calibrated todayDate using UTC arithmetic
+    const [year, month, day] = todayDate.split("-").map(Number);
+    const todayUtc = new Date(Date.UTC(year, month - 1, day));
     // Monday as 0, Sunday as 6 in JS day offset
-    const dayOfWeek = (todayObj.getDay() + 6) % 7;
+    const dayOfWeek = (todayUtc.getUTCDay() + 6) % 7;
     const mondayDate = addDays(todayDate, -dayOfWeek);
 
     const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
