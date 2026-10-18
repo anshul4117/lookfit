@@ -32,15 +32,25 @@ import {
 
 interface PrebuiltRoutinesViewProps {
   routines: PrebuiltRoutineDetail[];
+  activeRoutineTypes?: ("morning" | "evening")[];
+  initialSessionType?: "morning" | "evening";
 }
 
-export function PrebuiltRoutinesView({ routines }: PrebuiltRoutinesViewProps) {
+export function PrebuiltRoutinesView({
+  routines,
+  activeRoutineTypes = [],
+  initialSessionType,
+}: PrebuiltRoutinesViewProps) {
   const router = useRouter();
   const [adoptingType, setAdoptingType] = React.useState<"morning" | "evening" | null>(null);
   const [adoptedTypes, setAdoptedTypes] = React.useState<Set<string>>(new Set());
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
-  const [expandedRoutine, setExpandedRoutine] = React.useState<string | null>("prebuilt-morning");
+
+  const defaultExpanded = initialSessionType
+    ? `prebuilt-${initialSessionType}`
+    : "prebuilt-morning";
+  const [expandedRoutine, setExpandedRoutine] = React.useState<string | null>(defaultExpanded);
   const [expandedExerciseSlug, setExpandedExerciseSlug] = React.useState<string | null>(null);
 
   const handleAdopt = async (sessionType: "morning" | "evening", routineName: string) => {
@@ -72,6 +82,13 @@ export function PrebuiltRoutinesView({ routines }: PrebuiltRoutinesViewProps) {
 
   const morningRoutine = routines.find((r) => r.session_type === "morning");
   const eveningRoutine = routines.find((r) => r.session_type === "evening");
+
+  const orderedRoutines = React.useMemo(() => {
+    if (initialSessionType === "evening") {
+      return [eveningRoutine, morningRoutine].filter(Boolean) as PrebuiltRoutineDetail[];
+    }
+    return [morningRoutine, eveningRoutine].filter(Boolean) as PrebuiltRoutineDetail[];
+  }, [initialSessionType, morningRoutine, eveningRoutine]);
 
   return (
     <div className="space-y-8" id="prebuilt-routines-review">
@@ -140,12 +157,12 @@ export function PrebuiltRoutinesView({ routines }: PrebuiltRoutinesViewProps) {
 
       {/* Routine Cards Grid */}
       <div className="grid gap-8 lg:grid-cols-2">
-        {[morningRoutine, eveningRoutine].filter(Boolean).map((routine) => {
-          if (!routine) return null;
+        {orderedRoutines.map((routine) => {
           const isMorning = routine.session_type === "morning";
           const isExpanded = expandedRoutine === routine.id;
           const isAdopting = adoptingType === routine.session_type;
           const isAdopted = adoptedTypes.has(routine.session_type);
+          const hasActiveRoutine = activeRoutineTypes.includes(routine.session_type);
 
           return (
             <Card
@@ -174,9 +191,16 @@ export function PrebuiltRoutinesView({ routines }: PrebuiltRoutinesViewProps) {
                     <span className="capitalize">{routine.session_type} Plan</span>
                   </span>
 
-                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 border border-slate-200">
-                    Pre-built Template
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {hasActiveRoutine && (
+                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 border border-slate-200">
+                        Active Routine Exists
+                      </span>
+                    )}
+                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 border border-slate-200">
+                      Pre-built Template
+                    </span>
+                  </div>
                 </div>
 
                 <div>
@@ -277,11 +301,11 @@ export function PrebuiltRoutinesView({ routines }: PrebuiltRoutinesViewProps) {
                             </button>
                           </div>
 
-                          {/* Alternative Movement notice */}
+                          {/* Alternative Movement notice without hardcoded wall/doorway suffix */}
                           {ex.alternative_name && (
                             <div className="rounded-md bg-amber-50/70 border border-amber-200/50 px-2 py-1 text-[11px] text-amber-900">
                               <span className="font-semibold">Alternative: </span>
-                              <span>{ex.alternative_name} (if no wall/doorway available)</span>
+                              <span>{ex.alternative_name}</span>
                             </div>
                           )}
 
@@ -319,43 +343,57 @@ export function PrebuiltRoutinesView({ routines }: PrebuiltRoutinesViewProps) {
                 >
                   <Button
                     id={`customize-prebuilt-${routine.session_type}-button`}
-                    variant="outline"
+                    variant={hasActiveRoutine ? "default" : "outline"}
                     size="sm"
                     className="w-full text-xs font-semibold gap-1.5"
                   >
-                    <Edit3 className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+                    <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
                     <span>Customize in Editor</span>
                   </Button>
                 </Link>
 
-                <Button
-                  id={`adopt-prebuilt-${routine.session_type}-button`}
-                  size="sm"
-                  disabled={isAdopting}
-                  onClick={() => handleAdopt(routine.session_type, routine.name)}
-                  className={`w-full sm:w-auto text-xs font-bold gap-1.5 ${
-                    isMorning
-                      ? "bg-amber-600 hover:bg-amber-700 text-white"
-                      : "bg-sky-600 hover:bg-sky-700 text-white"
-                  }`}
-                >
-                  {isAdopting ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                      <span>Saving Routine...</span>
-                    </>
-                  ) : isAdopted ? (
-                    <>
-                      <CheckCircle2 className="h-3.5 w-3.5 text-white" aria-hidden="true" />
-                      <span>Saved (Adopt Again)</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>Adopt This Routine</span>
-                    </>
-                  )}
-                </Button>
+                {hasActiveRoutine ? (
+                  <Button
+                    id={`adopt-prebuilt-${routine.session_type}-button`}
+                    variant="outline"
+                    size="sm"
+                    disabled
+                    className="w-full sm:w-auto text-xs font-semibold text-slate-500 cursor-not-allowed gap-1.5"
+                    title="An active routine of this type already exists. Customize the template in the editor to make changes without overwriting your routine."
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                    <span>Active Routine Exists</span>
+                  </Button>
+                ) : (
+                  <Button
+                    id={`adopt-prebuilt-${routine.session_type}-button`}
+                    size="sm"
+                    disabled={isAdopting}
+                    onClick={() => handleAdopt(routine.session_type, routine.name)}
+                    className={`w-full sm:w-auto text-xs font-bold gap-1.5 ${
+                      isMorning
+                        ? "bg-amber-600 hover:bg-amber-700 text-white"
+                        : "bg-sky-600 hover:bg-sky-700 text-white"
+                    }`}
+                  >
+                    {isAdopting ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                        <span>Saving Routine...</span>
+                      </>
+                    ) : isAdopted ? (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5 text-white" aria-hidden="true" />
+                        <span>Saved</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        <span>Adopt This Routine</span>
+                      </>
+                    )}
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           );

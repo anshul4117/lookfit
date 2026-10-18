@@ -196,21 +196,15 @@ describe("Pre-built Routine Adoption Action", () => {
     expect(mockSupabase.rpc).not.toHaveBeenCalled();
   });
 
-  it("updates to Version N + 1 when user has an active routine with different configuration", async () => {
-    const existingRoutine = {
+  it("returns CONFLICT and refuses to overwrite when an active custom routine already exists", async () => {
+    const existingCustomRoutine = {
       ...createMockRoutine({
         id: "00000000-0000-0000-0000-000000000001",
-        name: "Customized Morning Routine",
+        name: "My Custom Morning Flow",
         version: 1,
       }),
-      routine_exercises: Array(4).fill({ id: "re-custom" }), // Different count/name
+      routine_exercises: Array(4).fill({ id: "re-custom" }), // Different count & name
     };
-
-    const updatedRoutineV2 = createMockRoutine({
-      id: "00000000-0000-0000-0000-000000000002",
-      name: PREBUILT_MORNING_ROUTINE.name,
-      version: 2,
-    });
 
     const mockSupabase = {
       auth: {
@@ -237,34 +231,27 @@ describe("Pre-built Routine Adoption Action", () => {
             order: vi.fn().mockReturnThis(),
             limit: vi.fn().mockReturnThis(),
             maybeSingle: vi.fn().mockResolvedValue({
-              data: existingRoutine,
+              data: existingCustomRoutine,
               error: null,
             }),
           };
         }
         return {};
       }),
-      rpc: vi.fn().mockResolvedValue({
-        data: updatedRoutineV2,
-        error: null,
-      }),
+      rpc: vi.fn(),
     };
     vi.mocked(createClient).mockResolvedValue(mockSupabase as never);
 
     const result = await adoptPrebuiltRoutineAction({ session_type: "morning" });
 
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.version).toBe(2);
-      expect(result.data.id).toBe("00000000-0000-0000-0000-000000000002");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("CONFLICT");
+      expect(result.error.message).toContain("You already have an active morning routine");
+      expect(result.error.message).toContain("To protect your customized routine");
     }
-    expect(mockSupabase.rpc).toHaveBeenCalledWith(
-      "update_routine_version",
-      expect.objectContaining({
-        p_routine_id: "00000000-0000-0000-0000-000000000001",
-        p_name: PREBUILT_MORNING_ROUTINE.name,
-      })
-    );
+    // Verifies NO database RPC was called to mutate, overwrite, or archive the routine
+    expect(mockSupabase.rpc).not.toHaveBeenCalled();
   });
 
   it("handles missing catalog exercises gracefully with INTERNAL_ERROR", async () => {

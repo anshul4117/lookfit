@@ -498,13 +498,15 @@ export async function adoptPrebuiltRoutineAction(
         return createSuccessResult(cleanRoutine as RoutineRecord);
       }
 
-      // Update to version N + 1
-      return updateRoutineAction({
-        id: existingActive.id,
-        name: blueprint.name,
-        estimated_minutes: blueprint.estimatedMinutes,
-        exercises: exercisePayload,
-      });
+      // Protect existing custom routines: never silently overwrite or archive them
+      return createErrorResult(
+        "CONFLICT",
+        `You already have an active ${session_type} routine ("${existingActive.name}"). To protect your customized routine, edit it directly or customize this template in the editor before saving.`,
+        {
+          existingRoutineId: [existingActive.id],
+          existingRoutineName: [existingActive.name],
+        }
+      );
     }
 
     // Create new Version 1

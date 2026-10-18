@@ -28,19 +28,26 @@ export default async function RoutinesPage({ searchParams }: RoutinesPageProps) 
     typeof rawParams.type === "string" ? rawParams.type : undefined
   ) as SessionType | undefined;
 
-  const [result, prebuiltResult] = await Promise.all([
+  const [result, allActiveResult, prebuiltResult] = await Promise.all([
     getUserRoutinesQuery({
       status: statusParam,
       session_type: sessionTypeParam,
     }),
+    getUserRoutinesQuery({
+      status: "active",
+    }),
     getPrebuiltRoutinesQuery(),
   ]);
 
-  const isFirstTimeExperience =
-    result.success &&
-    result.data.length === 0 &&
-    !statusParam &&
-    !sessionTypeParam;
+  const hasAnyActiveRoutines =
+    allActiveResult.success && allActiveResult.data.length > 0;
+
+  // First-time experience: user has no active saved routines and is not inspecting archived versions
+  const isFirstTimeExperience = !hasAnyActiveRoutines && statusParam !== "archived";
+
+  const activeRoutineTypes = allActiveResult.success
+    ? allActiveResult.data.map((r) => r.session_type)
+    : [];
 
   return (
     <div className="space-y-8" id="routines-page">
@@ -78,21 +85,60 @@ export default async function RoutinesPage({ searchParams }: RoutinesPageProps) 
       {/* Routine Generator Panel */}
       <RoutineGeneratePanel />
 
-      {/* First-time Experience: No saved routines yet */}
+      {/* First-time Experience: No saved routines yet (even when filtered by ?type=morning or ?type=evening) */}
       {isFirstTimeExperience ? (
         <section aria-labelledby="prebuilt-routines-heading" className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-            <Compass className="h-4 w-4 text-primary" aria-hidden="true" />
-            <h2
-              id="prebuilt-routines-heading"
-              className="text-sm font-bold uppercase tracking-wider text-slate-700"
-            >
-              Pre-built Workout Plan Blueprints
-            </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+            <div className="flex items-center gap-2">
+              <Compass className="h-4 w-4 text-primary" aria-hidden="true" />
+              <h2
+                id="prebuilt-routines-heading"
+                className="text-sm font-bold uppercase tracking-wider text-slate-700"
+              >
+                Pre-built Workout Plan Blueprints
+              </h2>
+            </div>
+
+            {/* Quick Filter Links for First-Time Review */}
+            <div className="flex items-center gap-1 text-xs font-semibold">
+              <Link
+                href="/routines"
+                className={`rounded-lg px-2.5 py-1 transition-colors ${
+                  !sessionTypeParam
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                All Blueprints
+              </Link>
+              <Link
+                href="/routines?type=morning"
+                className={`rounded-lg px-2.5 py-1 transition-colors ${
+                  sessionTypeParam === "morning"
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Morning
+              </Link>
+              <Link
+                href="/routines?type=evening"
+                className={`rounded-lg px-2.5 py-1 transition-colors ${
+                  sessionTypeParam === "evening"
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Evening
+              </Link>
+            </div>
           </div>
 
           {prebuiltResult.success && prebuiltResult.data.length > 0 ? (
-            <PrebuiltRoutinesView routines={prebuiltResult.data} />
+            <PrebuiltRoutinesView
+              routines={prebuiltResult.data}
+              initialSessionType={sessionTypeParam}
+            />
           ) : (
             <div
               role="alert"
@@ -190,7 +236,7 @@ export default async function RoutinesPage({ searchParams }: RoutinesPageProps) 
             </div>
           )}
 
-          {/* Optional Accordion for returning users to inspect/adopt prebuilt templates */}
+          {/* Non-destructive Pre-built Blueprints Drawer for Returning Users */}
           {prebuiltResult.success && prebuiltResult.data.length > 0 && (
             <div className="border-t border-slate-200 pt-6">
               <details className="group rounded-xl border border-slate-200 bg-white p-4">
@@ -207,7 +253,11 @@ export default async function RoutinesPage({ searchParams }: RoutinesPageProps) 
                   </span>
                 </summary>
                 <div className="mt-6">
-                  <PrebuiltRoutinesView routines={prebuiltResult.data} />
+                  <PrebuiltRoutinesView
+                    routines={prebuiltResult.data}
+                    activeRoutineTypes={activeRoutineTypes}
+                    initialSessionType={sessionTypeParam}
+                  />
                 </div>
               </details>
             </div>
