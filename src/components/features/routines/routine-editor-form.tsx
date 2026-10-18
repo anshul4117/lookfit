@@ -43,15 +43,17 @@ interface RoutineEditorFormProps {
   initialRoutine?: RoutineWithExercises;
   availableExercises: ExerciseRecord[];
   sessionType?: SessionType;
+  mode?: "create" | "edit";
 }
 
 export function RoutineEditorForm({
   initialRoutine,
   availableExercises,
   sessionType = "morning",
+  mode,
 }: RoutineEditorFormProps) {
   const router = useRouter();
-  const isEditing = Boolean(initialRoutine);
+  const isEditing = mode ? mode === "edit" : Boolean(initialRoutine?.id);
 
   const [name, setName] = React.useState(initialRoutine?.name || `${sessionType === "morning" ? "Morning" : "Evening"} Custom Routine`);
   const [estimatedMinutes, setEstimatedMinutes] = React.useState(

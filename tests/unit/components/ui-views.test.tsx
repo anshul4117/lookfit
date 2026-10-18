@@ -5,6 +5,12 @@ import { DashboardContent } from "@/components/features/dashboard/dashboard-cont
 import { WorkoutPlayer } from "@/components/features/workout/workout-player";
 import { CalendarView } from "@/components/features/calendar/calendar-view";
 import { HabitsView } from "@/components/features/habits/habits-view";
+import {
+  DesktopNavigation,
+  MobileBottomNavigation,
+} from "@/components/features/navigation/app-nav";
+import { PrebuiltRoutinesView } from "@/components/features/routines/prebuilt-routines-view";
+import type { PrebuiltRoutineDetail } from "@/server/queries/routines";
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -82,5 +88,216 @@ describe("LookFit Frontend UI Smoke and Interaction Tests", () => {
     expect(screen.getAllByText(/45-Minute Movement Breaks/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Eye-Level Screen Alignment/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/7-Day Consistency Matrix/i)).toBeInTheDocument();
+  });
+
+  it("renders DesktopNavigation with 'Workout Plan' pointing to /routines", () => {
+    render(<DesktopNavigation />);
+
+    const link = screen.getByRole("link", { name: /Workout Plan/i });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "/routines");
+    expect(link).toHaveAttribute("id", "nav-routines");
+  });
+
+  it("renders MobileBottomNavigation with 'Workout Plan' pointing to /routines", () => {
+    render(<MobileBottomNavigation />);
+
+    const link = screen.getByRole("link", { name: /Workout Plan/i });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "/routines");
+    expect(link).toHaveAttribute("id", "mobile-nav-routines");
+  });
+
+  it("renders PrebuiltRoutinesView for first-time review with both blueprints, safety cues, and no auto-start", () => {
+    const mockRoutines: PrebuiltRoutineDetail[] = [
+      {
+        id: "prebuilt-morning",
+        name: "Morning Posture & Lean Strength Activation",
+        session_type: "morning",
+        estimated_minutes: 25,
+        focus: "Thoracic extension, posture alignment, abs/core stability, and lean bodyweight strength.",
+        description: "Equipment-free morning routine designed to awaken posture.",
+        exercises: [
+          {
+            exercise_id: "ex-1",
+            slug: "cat-cow",
+            name: "Cat-Cow Stretch",
+            category: "posture_spine",
+            difficulty: "beginner",
+            position: 1,
+            prescribed_sets: 2,
+            prescribed_reps: 10,
+            prescribed_duration_seconds: null,
+            rest_seconds: 15,
+            target_areas: ["spine", "back"],
+            instructions: ["Start on hands and knees.", "Inhale arch, exhale round."],
+            safety_notes: "Move comfortably. Stop for sharp pain.",
+            alternative_slug: "prone-w-raise",
+            alternative_name: "Prone W Raise (Floor-Based Alternative)",
+          },
+        ],
+      },
+      {
+        id: "prebuilt-evening",
+        name: "Evening Spinal Mobility & Decompression Recovery",
+        session_type: "evening",
+        estimated_minutes: 20,
+        focus: "Gentle spinal decompression, chest opening, hip flexor release, and relaxation.",
+        description: "Restorative evening sequence for decompression.",
+        exercises: [
+          {
+            exercise_id: "ex-2",
+            slug: "child-pose",
+            name: "Child's Pose",
+            category: "flexibility_mobility",
+            difficulty: "beginner",
+            position: 1,
+            prescribed_sets: 2,
+            prescribed_reps: null,
+            prescribed_duration_seconds: 40,
+            rest_seconds: 15,
+            target_areas: ["lower_back", "hips"],
+            instructions: ["Kneel and sit back onto heels.", "Reach arms forward."],
+            safety_notes: "Place a folded towel under knees if sensitive.",
+            alternative_slug: undefined,
+            alternative_name: undefined,
+          },
+        ],
+      },
+    ];
+
+    render(<PrebuiltRoutinesView routines={mockRoutines} />);
+
+    // Check headings and copy
+    expect(screen.getByText(/Recommended Starting Workout Plan/i)).toBeInTheDocument();
+    expect(screen.getByText(/Morning Posture & Lean Strength Activation/i)).toBeInTheDocument();
+    expect(screen.getByText(/Evening Spinal Mobility & Decompression Recovery/i)).toBeInTheDocument();
+    expect(screen.getByText(/~25 minutes/i)).toBeInTheDocument();
+    expect(screen.getByText(/~20 minutes/i)).toBeInTheDocument();
+
+    // Verify alternative renders clean catalog name without hardcoded wall/doorway suffix
+    expect(screen.getByText(/Prone W Raise \(Floor-Based Alternative\)/i)).toBeInTheDocument();
+    expect(screen.queryByText(/if no wall\/doorway available/i)).not.toBeInTheDocument();
+
+    // Verify both Adopt buttons exist
+    const adoptBtns = screen.getAllByRole("button", { name: /Adopt This Routine/i });
+    expect(adoptBtns).toHaveLength(2);
+    expect(adoptBtns[0]).toHaveAttribute("id", "adopt-prebuilt-morning-button");
+    expect(adoptBtns[1]).toHaveAttribute("id", "adopt-prebuilt-evening-button");
+
+    // Verify Customize links exist with template query params
+    const customizeLinks = screen.getAllByRole("link", { name: /Customize in Editor/i });
+    expect(customizeLinks).toHaveLength(2);
+    expect(customizeLinks[0]).toHaveAttribute("href", "/routines/new?template=morning");
+    expect(customizeLinks[1]).toHaveAttribute("href", "/routines/new?template=evening");
+
+    // Verify Rule 07 posture & health disclaimer
+    expect(screen.getByText(/Posture, Mobility & Safety Guidelines/i)).toBeInTheDocument();
+    expect(screen.getByText(/adult height increase cannot be guaranteed/i)).toBeInTheDocument();
+    expect(screen.getByText(/Stop immediately if you feel sharp pain/i)).toBeInTheDocument();
+  });
+
+  it("protects existing routines when activeRoutineTypes indicates custom routine exists", () => {
+    const mockRoutines: PrebuiltRoutineDetail[] = [
+      {
+        id: "prebuilt-morning",
+        name: "Morning Posture & Lean Strength Activation",
+        session_type: "morning",
+        estimated_minutes: 25,
+        focus: "Thoracic extension, posture alignment.",
+        description: "Equipment-free morning routine.",
+        exercises: [],
+      },
+      {
+        id: "prebuilt-evening",
+        name: "Evening Spinal Mobility & Decompression Recovery",
+        session_type: "evening",
+        estimated_minutes: 20,
+        focus: "Gentle spinal decompression.",
+        description: "Restorative evening sequence.",
+        exercises: [],
+      },
+    ];
+
+    render(
+      <PrebuiltRoutinesView
+        routines={mockRoutines}
+        activeRoutineTypes={["morning"]}
+      />
+    );
+
+    // Morning card shows Active Routine Exists badge and disables Adopt button
+    expect(screen.getAllByText(/Active Routine Exists/i).length).toBeGreaterThan(0);
+    const morningAdoptBtn = screen.getByRole("button", { name: /Active Routine Exists/i });
+    expect(morningAdoptBtn).toBeDisabled();
+
+    // Evening card still allows adoption
+    const eveningAdoptBtn = screen.getByRole("button", { name: /Adopt This Routine/i });
+    expect(eveningAdoptBtn).not.toBeDisabled();
+  });
+
+  it("prioritizes and expands the requested session type when initialSessionType is set", () => {
+    const mockRoutines: PrebuiltRoutineDetail[] = [
+      {
+        id: "prebuilt-morning",
+        name: "Morning Posture Plan",
+        session_type: "morning",
+        estimated_minutes: 25,
+        focus: "Morning posture",
+        description: "Morning description",
+        exercises: [
+          {
+            exercise_id: "ex-1",
+            slug: "cat-cow",
+            name: "Cat-Cow Stretch",
+            category: "posture_spine",
+            difficulty: "beginner",
+            position: 1,
+            prescribed_sets: 2,
+            prescribed_reps: 10,
+            prescribed_duration_seconds: null,
+            rest_seconds: 15,
+            target_areas: ["spine"],
+            instructions: ["Hands and knees."],
+            safety_notes: "",
+          },
+        ],
+      },
+      {
+        id: "prebuilt-evening",
+        name: "Evening Recovery Plan",
+        session_type: "evening",
+        estimated_minutes: 20,
+        focus: "Evening decompression",
+        description: "Evening description",
+        exercises: [
+          {
+            exercise_id: "ex-2",
+            slug: "child-pose",
+            name: "Child's Pose",
+            category: "flexibility_mobility",
+            difficulty: "beginner",
+            position: 1,
+            prescribed_sets: 2,
+            prescribed_reps: null,
+            prescribed_duration_seconds: 45,
+            rest_seconds: 15,
+            target_areas: ["lower_back"],
+            instructions: ["Sit on heels."],
+            safety_notes: "",
+          },
+        ],
+      },
+    ];
+
+    render(
+      <PrebuiltRoutinesView
+        routines={mockRoutines}
+        initialSessionType="evening"
+      />
+    );
+
+    // Evening exercise list is expanded by default
+    expect(screen.getByText(/Child's Pose/i)).toBeInTheDocument();
   });
 });

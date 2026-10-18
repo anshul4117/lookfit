@@ -296,3 +296,113 @@ export async function getRoutineVersionsQuery(
     );
   }
 }
+
+export interface PrebuiltRoutineDetail {
+  id: "prebuilt-morning" | "prebuilt-evening";
+  name: string;
+  session_type: "morning" | "evening";
+  estimated_minutes: number;
+  focus: string;
+  description: string;
+  exercises: {
+    exercise_id: string;
+    slug: string;
+    name: string;
+    category: string;
+    difficulty: string;
+    position: number;
+    prescribed_sets: number;
+    prescribed_reps: number | null;
+    prescribed_duration_seconds: number | null;
+    rest_seconds: number;
+    target_areas: string[];
+    instructions: string[];
+    safety_notes: string;
+    alternative_slug?: string;
+    alternative_name?: string;
+  }[];
+}
+
+/**
+ * Retrieves the deterministic pre-built Morning and Evening routine blueprints,
+ * joining each exercise with active database catalog details under PostgreSQL RLS.
+ */
+export async function getPrebuiltRoutinesQuery(): Promise<
+  ActionResult<PrebuiltRoutineDetail[]>
+> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return createErrorResult("UNAUTHENTICATED", "Authentication required");
+    }
+
+    const { data: exercisesData, error: exercisesError } = await supabase
+      .from("exercises")
+      .select("id, slug, name, category, difficulty, target_areas, instructions, safety_notes")
+      .eq("is_active", true);
+
+    if (exercisesError) {
+      const sanitized = sanitizeError(exercisesError);
+      return createErrorResult(
+        sanitized.code,
+        sanitized.message,
+        sanitized.details
+      );
+    }
+
+    // Dynamic import to avoid circular dependency
+    const { PREBUILT_ROUTINES } = await import("@/lib/domain/prebuilt-routines");
+
+    const catalogMap = new Map((exercisesData || []).map((e) => [e.slug, e]));
+
+    const details: PrebuiltRoutineDetail[] = PREBUILT_ROUTINES.map((blueprint) => {
+      const mappedExercises = blueprint.exercises
+        .map((be) => {
+          const catalogItem = catalogMap.get(be.slug);
+          if (!catalogItem) return null;
+          return {
+            exercise_id: catalogItem.id,
+            slug: be.slug,
+            name: catalogItem.name,
+            category: catalogItem.category,
+            difficulty: catalogItem.difficulty,
+            position: be.position,
+            prescribed_sets: be.prescribedSets,
+            prescribed_reps: be.prescribedReps,
+            prescribed_duration_seconds: be.prescribedDurationSeconds,
+            rest_seconds: be.restSeconds,
+            target_areas: catalogItem.target_areas || [],
+            instructions: catalogItem.instructions || [],
+            safety_notes: catalogItem.safety_notes || "",
+            alternative_slug: be.alternativeSlug,
+            alternative_name: be.alternativeName,
+          };
+        })
+        .filter(Boolean) as PrebuiltRoutineDetail["exercises"];
+
+      return {
+        id: blueprint.id,
+        name: blueprint.name,
+        session_type: blueprint.sessionType,
+        estimated_minutes: blueprint.estimatedMinutes,
+        focus: blueprint.focus,
+        description: blueprint.description,
+        exercises: mappedExercises,
+      };
+    });
+
+    return createSuccessResult(details);
+  } catch (err) {
+    const sanitized = sanitizeError(err);
+    return createErrorResult(
+      sanitized.code,
+      sanitized.message,
+      sanitized.details
+    );
+  }
+}
