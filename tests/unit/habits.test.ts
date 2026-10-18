@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { toggleHabitSchema } from "@/lib/validation/habits";
 import { toggleDailyHabitAction } from "@/server/actions/habits";
 import { getHabitsDataQuery } from "@/server/queries/habits";
@@ -123,6 +123,10 @@ describe("getHabitsDataQuery", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("returns UNAUTHENTICATED when user is not logged in", async () => {
     const mockSupabase = {
       auth: {
@@ -142,6 +146,9 @@ describe("getHabitsDataQuery", () => {
   });
 
   it("queries 7-day habits and computes streak", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-17T12:00:00.000Z"));
+
     const mockHabitsRows = [
       {
         habit_key: "habit-sleep",
@@ -202,6 +209,8 @@ describe("getHabitsDataQuery", () => {
       expect(result.data.habits.length).toBe(4);
       expect(result.data.daysOfWeek.length).toBe(7);
       expect(result.data.daysOfWeek[6]).toBe("Today");
+      expect(result.data.todayDate).toBe("2026-10-17");
+      expect(result.data.streakDays).toBe(2);
 
       const sleepHabit = result.data.habits.find((h) => h.id === "habit-sleep");
       expect(sleepHabit).toBeDefined();
