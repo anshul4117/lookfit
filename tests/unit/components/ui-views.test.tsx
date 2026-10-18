@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import * as React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { DashboardContent } from "@/components/features/dashboard/dashboard-content";
 import { WorkoutPlayer } from "@/components/features/workout/workout-player";
 import { CalendarView } from "@/components/features/calendar/calendar-view";
@@ -11,6 +11,9 @@ import {
 } from "@/components/features/navigation/app-nav";
 import { PrebuiltRoutinesView } from "@/components/features/routines/prebuilt-routines-view";
 import type { PrebuiltRoutineDetail } from "@/server/queries/routines";
+import type { DashboardData } from "@/server/queries/dashboard";
+
+const mockRefresh = vi.fn();
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -18,6 +21,7 @@ vi.mock("next/navigation", () => ({
     push: vi.fn(),
     replace: vi.fn(),
     prefetch: vi.fn(),
+    refresh: mockRefresh,
   }),
   usePathname: () => "/dashboard",
 }));
@@ -299,5 +303,161 @@ describe("LookFit Frontend UI Smoke and Interaction Tests", () => {
 
     // Evening exercise list is expanded by default
     expect(screen.getByText(/Child's Pose/i)).toBeInTheDocument();
+  });
+
+  it("renders DashboardContent error state and triggers refresh on retry", () => {
+    mockRefresh.mockClear();
+
+    render(
+      <DashboardContent
+        error="Unable to connect to database"
+      />
+    );
+
+    expect(screen.getByText(/Unable to Load Dashboard Data/i)).toBeInTheDocument();
+    expect(screen.getByText(/Unable to connect to database/i)).toBeInTheDocument();
+
+    const retryButton = screen.getByRole("button", { name: /Retry/i });
+    expect(retryButton).toBeInTheDocument();
+
+    fireEvent.click(retryButton);
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders DashboardContent with honest zero statistics and unconfigured routine state", () => {
+    const zeroData: DashboardData = {
+      user: {
+        displayName: "New Starter",
+        email: "starter@lookfit.test",
+        timezone: "Asia/Kolkata",
+        availableMinutes: 20,
+        fitnessLevel: "intermediate",
+        isOnboardingComplete: true,
+        todayFormatted: "Sunday, Oct 18",
+      },
+      streak: {
+        activeStreak: 0,
+        longestStreak: 0,
+      },
+      stats: {
+        totalSessionsDone: 0,
+        totalMobilityMinutes: 0,
+      },
+      weeklyActivity: [
+        { day: "Mon", date: "2026-10-12", morning: false, evening: false, isToday: false },
+        { day: "Tue", date: "2026-10-13", morning: false, evening: false, isToday: false },
+        { day: "Wed", date: "2026-10-14", morning: false, evening: false, isToday: false },
+        { day: "Thu", date: "2026-10-15", morning: false, evening: false, isToday: false },
+        { day: "Fri", date: "2026-10-16", morning: false, evening: false, isToday: false },
+        { day: "Sat", date: "2026-10-17", morning: false, evening: false, isToday: false },
+        { day: "Sun", date: "2026-10-18", morning: false, evening: false, isToday: true },
+      ],
+      morningSession: {
+        routine: null,
+        status: "not_started",
+        completedAt: undefined,
+        activeSessionId: undefined,
+      },
+      eveningSession: {
+        routine: null,
+        status: "not_started",
+        completedAt: undefined,
+        activeSessionId: undefined,
+      },
+    };
+
+    render(<DashboardContent initialData={zeroData} />);
+
+    // Honest zero statistics — no fake 5 days or 460 min
+    expect(screen.getAllByText("0 Days")).toHaveLength(2);
+    expect(screen.getByText("0 Total")).toBeInTheDocument();
+    expect(screen.getByText("0 Min")).toBeInTheDocument();
+
+    // Honest unconfigured routine state with CTA to Workout Plan
+    const noRoutineBadges = screen.getAllByText(/No Routine Adopted/i);
+    expect(noRoutineBadges.length).toBe(2);
+
+    const planButtons = screen.getAllByRole("button", { name: /Choose Plan in Workout Plan/i });
+    expect(planButtons.length).toBe(2);
+
+    // Formatted date from server
+    expect(screen.getByText(/Sunday, Oct 18/i)).toBeInTheDocument();
+  });
+
+  it("renders DashboardContent weekly activity with real dots and current day highlight", () => {
+    const weeklyData: DashboardData = {
+      user: {
+        displayName: "Active Athlete",
+        email: "athlete@lookfit.test",
+        timezone: "Asia/Kolkata",
+        availableMinutes: 25,
+        fitnessLevel: "intermediate",
+        isOnboardingComplete: true,
+        todayFormatted: "Sunday, Oct 18",
+      },
+      streak: {
+        activeStreak: 3,
+        longestStreak: 5,
+      },
+      stats: {
+        totalSessionsDone: 4,
+        totalMobilityMinutes: 90,
+      },
+      weeklyActivity: [
+        { day: "Mon", date: "2026-10-12", morning: true, evening: false, isToday: false },
+        { day: "Tue", date: "2026-10-13", morning: false, evening: true, isToday: false },
+        { day: "Wed", date: "2026-10-14", morning: true, evening: true, isToday: false },
+        { day: "Thu", date: "2026-10-15", morning: false, evening: false, isToday: false },
+        { day: "Fri", date: "2026-10-16", morning: false, evening: false, isToday: false },
+        { day: "Sat", date: "2026-10-17", morning: false, evening: false, isToday: false },
+        { day: "Sun", date: "2026-10-18", morning: true, evening: false, isToday: true },
+      ],
+      morningSession: {
+        routine: {
+          id: "routine-m1",
+          name: "Morning Posture Flow",
+          sessionType: "morning",
+          estimatedMinutes: 20,
+          exerciseCount: 5,
+          exercisesSummary: ["Cat-Cow", "Glute Bridge"],
+        },
+        status: "completed",
+        completedAt: "2026-10-18T08:00:00Z",
+        activeSessionId: undefined,
+      },
+      eveningSession: {
+        routine: {
+          id: "routine-e1",
+          name: "Evening Decompression",
+          sessionType: "evening",
+          estimatedMinutes: 15,
+          exerciseCount: 4,
+          exercisesSummary: ["Child's Pose", "Kneeling Quad Stretch"],
+        },
+        status: "not_started",
+        completedAt: undefined,
+        activeSessionId: undefined,
+      },
+    };
+
+    render(<DashboardContent initialData={weeklyData} />);
+
+    // Real stats
+    expect(screen.getByText("3 Days")).toBeInTheDocument();
+    expect(screen.getByText("4 Total")).toBeInTheDocument();
+    expect(screen.getByText("90 Min")).toBeInTheDocument();
+
+    // Morning routine completed badge and review button
+    expect(screen.getByText(/Completed Today/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Completed Today \(Restart\)/i })).toBeInTheDocument();
+
+    // Evening routine ready to start
+    expect(screen.getByRole("button", { name: /Start Evening Decompression/i })).toBeInTheDocument();
+
+    // Check weekly activity days rendered
+    const weeklyLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    for (const label of weeklyLabels) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
   });
 });

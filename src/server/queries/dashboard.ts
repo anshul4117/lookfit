@@ -7,6 +7,7 @@ import {
 } from "@/lib/errors";
 import { calculateActivityDate } from "@/lib/domain/workout";
 import { calculateStreaks } from "@/lib/streaks";
+import { addDays } from "@/lib/dates";
 import type { Tables } from "@/types/database";
 
 export interface DashboardRoutineInfo {
@@ -25,6 +26,14 @@ export interface DashboardSessionState {
   completedAt?: string;
 }
 
+export interface DashboardWeeklyDay {
+  day: string;
+  date: string;
+  morning: boolean;
+  evening: boolean;
+  isToday: boolean;
+}
+
 export interface DashboardData {
   user: {
     displayName: string;
@@ -33,6 +42,7 @@ export interface DashboardData {
     availableMinutes: number;
     fitnessLevel: string;
     isOnboardingComplete: boolean;
+    todayFormatted: string;
   };
   streak: {
     activeStreak: number;
@@ -44,6 +54,7 @@ export interface DashboardData {
   };
   morningSession: DashboardSessionState;
   eveningSession: DashboardSessionState;
+  weeklyActivity: DashboardWeeklyDay[];
 }
 
 type RoutineRow = Tables<"routines"> & {
@@ -130,7 +141,9 @@ export async function getDashboardDataQuery(): Promise<ActionResult<DashboardDat
       .from("workout_sessions")
       .select("id, activity_date, duration_seconds, session_type, completed_at")
       .eq("user_id", user.id)
-      .eq("status", "completed");
+      .eq("status", "completed")
+      .order("activity_date", { ascending: false })
+      .order("completed_at", { ascending: false });
 
     if (completedError) {
       const sanitized = sanitizeError(completedError);
@@ -148,7 +161,36 @@ export async function getDashboardDataQuery(): Promise<ActionResult<DashboardDat
     const activityDates = sessions.map((s) => s.activity_date);
     const { currentStreak, longestStreak } = calculateStreaks(activityDates, todayDate);
 
-    // 4. Fetch Active In-Progress Sessions
+    // 4. Compute Weekly Activity Timeline (Monday through Sunday)
+    // Derive weekday from timezone-calibrated todayDate using UTC arithmetic
+    const [year, month, day] = todayDate.split("-").map(Number);
+    const todayUtc = new Date(Date.UTC(year, month - 1, day));
+    // Monday as 0, Sunday as 6 in JS day offset
+    const dayOfWeek = (todayUtc.getUTCDay() + 6) % 7;
+    const mondayDate = addDays(todayDate, -dayOfWeek);
+
+    const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const weeklyActivity: DashboardWeeklyDay[] = dayLabels.map((label, index) => {
+      const dateForDay = addDays(mondayDate, index);
+      const daySessions = sessions.filter((s) => s.activity_date === dateForDay);
+
+      return {
+        day: label,
+        date: dateForDay,
+        morning: daySessions.some((s) => s.session_type === "morning"),
+        evening: daySessions.some((s) => s.session_type === "evening"),
+        isToday: dateForDay === todayDate,
+      };
+    });
+
+    const todayFormatted = new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    }).format(todayUtc);
+
+    // 5. Fetch Active In-Progress Sessions
     const { data: inProgressSessions, error: inProgressError } = await supabase
       .from("workout_sessions")
       .select("id, routine_id, session_type, started_at")
@@ -165,7 +207,7 @@ export async function getDashboardDataQuery(): Promise<ActionResult<DashboardDat
     const activeMorning = activeList.find((s) => s.session_type === "morning");
     const activeEvening = activeList.find((s) => s.session_type === "evening");
 
-    // 5. Determine today's completion state
+    // 6. Determine today's completion state
     const todayMorningCompleted = sessions.find(
       (s) => s.activity_date === todayDate && s.session_type === "morning"
     );
@@ -204,6 +246,7 @@ export async function getDashboardDataQuery(): Promise<ActionResult<DashboardDat
         availableMinutes: profile?.available_minutes || 20,
         fitnessLevel: profile?.fitness_level || "intermediate",
         isOnboardingComplete: Boolean(profile?.onboarding_complete),
+        todayFormatted,
       },
       streak: {
         activeStreak: currentStreak,
@@ -215,6 +258,7 @@ export async function getDashboardDataQuery(): Promise<ActionResult<DashboardDat
       },
       morningSession: morningState,
       eveningSession: eveningState,
+      weeklyActivity,
     });
   } catch (err) {
     const sanitized = sanitizeError(err);

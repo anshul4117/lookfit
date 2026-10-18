@@ -15,6 +15,7 @@ import {
   Sparkles,
   ChevronRight,
   ShieldAlert,
+  AlertCircle,
   Dumbbell,
   BookOpen,
   Loader2,
@@ -37,37 +38,48 @@ export interface DashboardUserProps {
   availableMinutes: number;
   fitnessLevel: string;
   isOnboardingComplete: boolean;
+  todayFormatted?: string;
+}
+
+export interface DashboardContentProps {
+  user?: DashboardUserProps;
+  initialData?: DashboardData | null;
+  error?: string | null;
 }
 
 export function DashboardContent({
   user,
   initialData,
-}: {
-  user: DashboardUserProps;
-  initialData?: DashboardData | null;
-}) {
+  error,
+}: DashboardContentProps) {
   const router = useRouter();
-  const [mockStarting, setMockStarting] = React.useState<string | null>(null);
   const [isStartingType, setIsStartingType] = React.useState<"morning" | "evening" | null>(null);
   const [startError, setStartError] = React.useState<string | null>(null);
 
-  // Local calendar date formatting
-  const todayFormatted = new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  }).format(new Date());
-
-  const handleStartWorkout = (sessionSlug: string) => {
-    setMockStarting(sessionSlug);
-    setTimeout(() => {
-      router.push(`/workout/${sessionSlug}`);
-    }, 400);
+  const defaultUser: DashboardUserProps = {
+    displayName: "Athlete",
+    email: "",
+    timezone: "Asia/Kolkata",
+    availableMinutes: 20,
+    fitnessLevel: "intermediate",
+    isOnboardingComplete: true,
   };
+  const activeUser = user || defaultUser;
+
+  // Local calendar date formatting aligned with user timezone
+  const displayDate =
+    initialData?.user.todayFormatted ||
+    activeUser.todayFormatted ||
+    new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+      timeZone: activeUser.timezone || "Asia/Kolkata",
+    }).format(new Date());
 
   const handleLaunchWorkout = async (sessionType: "morning" | "evening") => {
     if (!initialData) {
-      handleStartWorkout(sessionType === "morning" ? "morning-session" : "evening-session");
+      setStartError("Dashboard data is unavailable. Please refresh the page.");
       return;
     }
 
@@ -82,7 +94,7 @@ export function DashboardContent({
       return;
     }
 
-    // 2. If routine exists, start a new session atomically via T11 RPC
+    // 2. If routine exists, start a new session atomically via database RPC
     if (sessionState.routine) {
       setIsStartingType(sessionType);
       setStartError(null);
@@ -101,7 +113,7 @@ export function DashboardContent({
         setIsStartingType(null);
       }
     } else {
-      // 3. Prompt user to calibrate routine
+      // 3. Prompt user to choose or adopt a routine in Workout Plan
       router.push("/routines");
     }
   };
@@ -119,10 +131,10 @@ export function DashboardContent({
             id="dashboard-heading"
             className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl"
           >
-            Welcome back, {user.displayName}!
+            Welcome back, {activeUser.displayName}!
           </h1>
           <p id="welcome-message" className="text-sm text-slate-600">
-            {todayFormatted} • Timezone: <span className="font-medium text-slate-800">{user.timezone}</span> • Intermediate Level
+            {displayDate} • Timezone: <span className="font-medium text-slate-800">{activeUser.timezone}</span> • Intermediate Level
           </p>
         </div>
 
@@ -142,8 +154,32 @@ export function DashboardContent({
         </div>
       </div>
 
+      {/* Query Error Banner */}
+      {error && (
+        <Card id="dashboard-error-card" role="alert" className="border-rose-200 bg-rose-50/70 p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" aria-hidden="true" />
+              <div>
+                <h3 className="text-sm font-bold text-rose-950">Unable to Load Dashboard Data</h3>
+                <p className="mt-0.5 text-xs text-rose-700">{error}</p>
+              </div>
+            </div>
+            <Button
+              id="dashboard-retry-button"
+              variant="outline"
+              size="sm"
+              onClick={() => router.refresh()}
+              className="border-rose-300 text-rose-900 hover:bg-rose-100 text-xs font-semibold shrink-0"
+            >
+              Retry
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* Onboarding State Detection Banner */}
-      {!user.isOnboardingComplete && (
+      {!activeUser.isOnboardingComplete && (
         <Card
           id="onboarding-prompt-card"
           className="border-emerald-200 bg-emerald-50/50 shadow-sm"
@@ -193,7 +229,7 @@ export function DashboardContent({
                 Active Streak
               </span>
               <p className="text-xl font-bold text-slate-900">
-                {initialData ? `${initialData.streak.activeStreak} Days` : "5 Days"}
+                {initialData ? `${initialData.streak.activeStreak} Days` : "0 Days"}
               </p>
             </div>
           </CardContent>
@@ -209,7 +245,7 @@ export function DashboardContent({
                 Longest Streak
               </span>
               <p className="text-xl font-bold text-indigo-950">
-                {initialData ? `${initialData.streak.longestStreak} Days` : "14 Days"}
+                {initialData ? `${initialData.streak.longestStreak} Days` : "0 Days"}
               </p>
             </div>
           </CardContent>
@@ -225,7 +261,7 @@ export function DashboardContent({
                 Sessions Done
               </span>
               <p className="text-xl font-bold text-slate-900">
-                {initialData ? `${initialData.stats.totalSessionsDone} Total` : "24 Total"}
+                {initialData ? `${initialData.stats.totalSessionsDone} Total` : "0 Total"}
               </p>
             </div>
           </CardContent>
@@ -241,7 +277,7 @@ export function DashboardContent({
                 Total Mobility
               </span>
               <p className="text-xl font-bold text-slate-900">
-                {initialData ? `${initialData.stats.totalMobilityMinutes} Min` : "460 Min"}
+                {initialData ? `${initialData.stats.totalMobilityMinutes} Min` : "0 Min"}
               </p>
             </div>
           </CardContent>
@@ -273,206 +309,264 @@ export function DashboardContent({
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Morning Activation Card */}
-          <Card
-            id="morning-session-card"
-            className="border-slate-200 bg-white shadow-sm transition hover:shadow-md flex flex-col justify-between"
-          >
-            <CardHeader className="pt-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-amber-50 p-2.5 text-amber-600 border border-amber-100">
-                    <Sun className="h-6 w-6" />
+          {(() => {
+            const morningRoutine = initialData?.morningSession.routine;
+            return (
+              <Card
+                id="morning-session-card"
+                className="border-slate-200 bg-white shadow-sm transition hover:shadow-md flex flex-col justify-between"
+              >
+                <CardHeader className="pt-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-xl bg-amber-50 p-2.5 text-amber-600 border border-amber-100">
+                        <Sun className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg font-bold text-slate-900">
+                          {morningRoutine?.name || "Morning Activation"}
+                        </CardTitle>
+                        <CardDescription className="text-xs text-slate-500">
+                          Full-body bodyweight strength • Defined abs • Spinal mobility
+                        </CardDescription>
+                      </div>
+                    </div>
+                    {morningRoutine ? (
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold border ${
+                          initialData?.morningSession.status === "completed"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : initialData?.morningSession.status === "in_progress"
+                            ? "bg-amber-100 text-amber-900 border-amber-300 animate-pulse"
+                            : "bg-amber-50 text-amber-800 border-amber-200"
+                        }`}
+                      >
+                        {initialData?.morningSession.status === "completed"
+                          ? "Completed"
+                          : initialData?.morningSession.status === "in_progress"
+                          ? "In Progress"
+                          : "Ready"}
+                      </span>
+                    ) : (
+                      <span className="rounded-full px-2.5 py-1 text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                        No Routine Adopted
+                      </span>
+                    )}
                   </div>
-                  <div>
-                    <CardTitle className="text-lg font-bold text-slate-900">
-                      {initialData?.morningSession.routine?.name || "Morning Activation: Strength & Core"}
-                    </CardTitle>
-                    <CardDescription className="text-xs text-slate-500">
-                      Full-body bodyweight strength • Defined abs • Spinal mobility
-                    </CardDescription>
-                  </div>
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold border ${
-                    initialData?.morningSession.status === "completed"
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                      : initialData?.morningSession.status === "in_progress"
-                      ? "bg-amber-100 text-amber-900 border-amber-300 animate-pulse"
-                      : "bg-amber-50 text-amber-800 border-amber-200"
-                  }`}
-                >
-                  {initialData?.morningSession.status === "completed"
-                    ? "Completed"
-                    : initialData?.morningSession.status === "in_progress"
-                    ? "In Progress"
-                    : "Ready"}
-                </span>
-              </div>
-            </CardHeader>
+                </CardHeader>
 
-            <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
-              <div className="space-y-2.5 text-xs text-slate-600">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">Estimated Duration:</span>
-                  <span className="font-semibold text-slate-800">
-                    {initialData?.morningSession.routine
-                      ? `${initialData.morningSession.routine.estimatedMinutes} minutes`
-                      : "20–30 minutes"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">Prescribed Exercises:</span>
-                  <span className="font-semibold text-slate-800">
-                    {initialData?.morningSession.routine
-                      ? `${initialData.morningSession.routine.exerciseCount} exercises`
-                      : "7–8 exercises"}
-                  </span>
-                </div>
-                <div className="rounded-lg bg-slate-50 p-2.5 text-[11px] text-slate-700 leading-relaxed border border-slate-100">
-                  <p className="font-medium text-slate-900 mb-0.5">Key Movements:</p>
-                  {initialData?.morningSession.routine?.exercisesSummary.length
-                    ? initialData.morningSession.routine.exercisesSummary.slice(0, 5).join(", ")
-                    : "Push-ups, Bodyweight Squats, Forearm Plank, Bird-Dog, Wall Angels, Prone W Raise."}
-                </div>
-              </div>
+                <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
+                  {morningRoutine ? (
+                    <>
+                      <div className="space-y-2.5 text-xs text-slate-600">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <span className="text-slate-500">Estimated Duration:</span>
+                          <span className="font-semibold text-slate-800">
+                            {morningRoutine.estimatedMinutes} minutes
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <span className="text-slate-500">Prescribed Exercises:</span>
+                          <span className="font-semibold text-slate-800">
+                            {morningRoutine.exerciseCount} exercises
+                          </span>
+                        </div>
+                        {Boolean(morningRoutine.exercisesSummary?.length) && (
+                          <div className="rounded-lg bg-slate-50 p-2.5 text-[11px] text-slate-700 leading-relaxed border border-slate-100">
+                            <p className="font-medium text-slate-900 mb-0.5">Key Movements:</p>
+                            {morningRoutine.exercisesSummary?.slice(0, 5).join(", ")}
+                          </div>
+                        )}
+                      </div>
 
-              <div className="pt-2">
-                <Button
-                  id="start-morning-workout-button"
-                  className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium min-h-[44px]"
-                  disabled={isStartingType === "morning" || mockStarting === "morning-session"}
-                  onClick={() => handleLaunchWorkout("morning")}
-                >
-                  {isStartingType === "morning" ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Launching Session...</span>
-                    </>
-                  ) : initialData?.morningSession.status === "in_progress" ? (
-                    <>
-                      <Play className="h-4 w-4 fill-current" />
-                      <span>Resume Morning Activation</span>
-                    </>
-                  ) : initialData?.morningSession.status === "completed" ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Completed Today (Restart)</span>
+                      <div className="pt-2">
+                        <Button
+                          id="start-morning-workout-button"
+                          className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium min-h-[44px]"
+                          disabled={isStartingType === "morning"}
+                          onClick={() => handleLaunchWorkout("morning")}
+                        >
+                          {isStartingType === "morning" ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>Launching Session...</span>
+                            </>
+                          ) : initialData?.morningSession.status === "in_progress" ? (
+                            <>
+                              <Play className="h-4 w-4 fill-current" />
+                              <span>Resume Morning Activation</span>
+                            </>
+                          ) : initialData?.morningSession.status === "completed" ? (
+                            <>
+                              <CheckCircle2 className="h-4 w-4" />
+                              <span>Completed Today (Restart)</span>
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-4 w-4 fill-current" />
+                              <span>Start {morningRoutine.name}</span>
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </>
                   ) : (
                     <>
-                      <Play className="h-4 w-4 fill-current" />
-                      <span>
-                        {initialData?.morningSession.routine
-                          ? `Start ${initialData.morningSession.routine.name}`
-                          : "Start Morning Strength & Core"}
-                      </span>
+                      <div className="rounded-xl border border-dashed border-amber-200/80 bg-amber-50/40 p-4 text-xs text-amber-950 space-y-1.5">
+                        <p className="font-semibold text-slate-900">No Morning Routine Configured</p>
+                        <p className="text-slate-600 leading-relaxed text-[11px]">
+                          Adopt a recommended pre-built morning blueprint or customize your own workout routine in Workout Plan.
+                        </p>
+                      </div>
+
+                      <div className="pt-2">
+                        <Link href="/routines" className="w-full">
+                          <Button
+                            id="adopt-morning-routine-button"
+                            variant="outline"
+                            className="w-full gap-2 border-amber-300 text-amber-900 hover:bg-amber-100/60 font-semibold text-xs min-h-[44px]"
+                          >
+                            <Dumbbell className="h-4 w-4" aria-hidden="true" />
+                            <span>Choose Plan in Workout Plan</span>
+                          </Button>
+                        </Link>
+                      </div>
                     </>
                   )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Evening Decompression Card (Sky Blue Theme) */}
-          <Card
-            id="evening-session-card"
-            className="border-slate-200 bg-white shadow-sm transition hover:shadow-md flex flex-col justify-between"
-          >
-            <CardHeader className="pt-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-sky-50 p-2.5 text-sky-600 border border-sky-100">
-                    <Moon className="h-6 w-6" />
+          {(() => {
+            const eveningRoutine = initialData?.eveningSession.routine;
+            return (
+              <Card
+                id="evening-session-card"
+                className="border-slate-200 bg-white shadow-sm transition hover:shadow-md flex flex-col justify-between"
+              >
+                <CardHeader className="pt-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-xl bg-sky-50 p-2.5 text-sky-600 border border-sky-100">
+                        <Moon className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg font-bold text-slate-900">
+                          {eveningRoutine?.name || "Evening Decompression"}
+                        </CardTitle>
+                        <CardDescription className="text-xs text-slate-500">
+                          Spinal decompression • Hip &amp; chest flexibility • Core recovery
+                        </CardDescription>
+                      </div>
+                    </div>
+                    {eveningRoutine ? (
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold border ${
+                          initialData?.eveningSession.status === "completed"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : initialData?.eveningSession.status === "in_progress"
+                            ? "bg-sky-100 text-sky-900 border-sky-300 animate-pulse"
+                            : "bg-sky-50 text-sky-800 border-sky-200"
+                        }`}
+                      >
+                        {initialData?.eveningSession.status === "completed"
+                          ? "Completed"
+                          : initialData?.eveningSession.status === "in_progress"
+                          ? "In Progress"
+                          : "Ready"}
+                      </span>
+                    ) : (
+                      <span className="rounded-full px-2.5 py-1 text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                        No Routine Adopted
+                      </span>
+                    )}
                   </div>
-                  <div>
-                    <CardTitle className="text-lg font-bold text-slate-900">
-                      {initialData?.eveningSession.routine?.name || "Evening Decompression: Mobility & Core"}
-                    </CardTitle>
-                    <CardDescription className="text-xs text-slate-500">
-                      Spinal decompression • Hip &amp; chest flexibility • Core recovery
-                    </CardDescription>
-                  </div>
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold border ${
-                    initialData?.eveningSession.status === "completed"
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                      : initialData?.eveningSession.status === "in_progress"
-                      ? "bg-sky-100 text-sky-900 border-sky-300 animate-pulse"
-                      : "bg-sky-50 text-sky-800 border-sky-200"
-                  }`}
-                >
-                  {initialData?.eveningSession.status === "completed"
-                    ? "Completed"
-                    : initialData?.eveningSession.status === "in_progress"
-                    ? "In Progress"
-                    : "Ready"}
-                </span>
-              </div>
-            </CardHeader>
+                </CardHeader>
 
-            <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
-              <div className="space-y-2.5 text-xs text-slate-600">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">Estimated Duration:</span>
-                  <span className="font-semibold text-slate-800">
-                    {initialData?.eveningSession.routine
-                      ? `${initialData.eveningSession.routine.estimatedMinutes} minutes`
-                      : "15–25 minutes"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">Prescribed Exercises:</span>
-                  <span className="font-semibold text-slate-800">
-                    {initialData?.eveningSession.routine
-                      ? `${initialData.eveningSession.routine.exerciseCount} exercises`
-                      : "6–7 exercises"}
-                  </span>
-                </div>
-                <div className="rounded-lg bg-sky-50/50 p-2.5 text-[11px] text-sky-900 leading-relaxed border border-sky-100">
-                  <p className="font-medium text-sky-950 mb-0.5">Key Movements:</p>
-                  {initialData?.eveningSession.routine?.exercisesSummary.length
-                    ? initialData.eveningSession.routine.exercisesSummary.slice(0, 5).join(", ")
-                    : "Child's Pose, Doorway Chest Stretch, Seated Spinal Twist, Sphinx Pose, Glute Bridge Hold."}
-                </div>
-              </div>
+                <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
+                  {eveningRoutine ? (
+                    <>
+                      <div className="space-y-2.5 text-xs text-slate-600">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <span className="text-slate-500">Estimated Duration:</span>
+                          <span className="font-semibold text-slate-800">
+                            {eveningRoutine.estimatedMinutes} minutes
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <span className="text-slate-500">Prescribed Exercises:</span>
+                          <span className="font-semibold text-slate-800">
+                            {eveningRoutine.exerciseCount} exercises
+                          </span>
+                        </div>
+                        {Boolean(eveningRoutine.exercisesSummary?.length) && (
+                          <div className="rounded-lg bg-sky-50/50 p-2.5 text-[11px] text-sky-900 leading-relaxed border border-sky-100">
+                            <p className="font-medium text-sky-950 mb-0.5">Key Movements:</p>
+                            {eveningRoutine.exercisesSummary?.slice(0, 5).join(", ")}
+                          </div>
+                        )}
+                      </div>
 
-              <div className="pt-2">
-                <Button
-                  id="start-evening-workout-button"
-                  className="w-full gap-2 bg-sky-600 hover:bg-sky-700 text-white font-medium min-h-[44px]"
-                  disabled={isStartingType === "evening" || mockStarting === "evening-session"}
-                  onClick={() => handleLaunchWorkout("evening")}
-                >
-                  {isStartingType === "evening" ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Launching Session...</span>
-                    </>
-                  ) : initialData?.eveningSession.status === "in_progress" ? (
-                    <>
-                      <Play className="h-4 w-4 fill-current" />
-                      <span>Resume Evening Decompression</span>
-                    </>
-                  ) : initialData?.eveningSession.status === "completed" ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Completed Today (Restart)</span>
+                      <div className="pt-2">
+                        <Button
+                          id="start-evening-workout-button"
+                          className="w-full gap-2 bg-sky-600 hover:bg-sky-700 text-white font-medium min-h-[44px]"
+                          disabled={isStartingType === "evening"}
+                          onClick={() => handleLaunchWorkout("evening")}
+                        >
+                          {isStartingType === "evening" ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>Launching Session...</span>
+                            </>
+                          ) : initialData?.eveningSession.status === "in_progress" ? (
+                            <>
+                              <Play className="h-4 w-4 fill-current" />
+                              <span>Resume Evening Decompression</span>
+                            </>
+                          ) : initialData?.eveningSession.status === "completed" ? (
+                            <>
+                              <CheckCircle2 className="h-4 w-4" />
+                              <span>Completed Today (Restart)</span>
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-4 w-4 fill-current" />
+                              <span>Start {eveningRoutine.name}</span>
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </>
                   ) : (
                     <>
-                      <Play className="h-4 w-4 fill-current" />
-                      <span>
-                        {initialData?.eveningSession.routine
-                          ? `Start ${initialData.eveningSession.routine.name}`
-                          : "Start Evening Decompression"}
-                      </span>
+                      <div className="rounded-xl border border-dashed border-sky-200/80 bg-sky-50/40 p-4 text-xs text-sky-950 space-y-1.5">
+                        <p className="font-semibold text-slate-900">No Evening Routine Configured</p>
+                        <p className="text-slate-600 leading-relaxed text-[11px]">
+                          Adopt a recommended pre-built evening recovery blueprint or customize your own plan in Workout Plan.
+                        </p>
+                      </div>
+
+                      <div className="pt-2">
+                        <Link href="/routines" className="w-full">
+                          <Button
+                            id="adopt-evening-routine-button"
+                            variant="outline"
+                            className="w-full gap-2 border-sky-300 text-sky-900 hover:bg-sky-100/60 font-semibold text-xs min-h-[44px]"
+                          >
+                            <Dumbbell className="h-4 w-4" aria-hidden="true" />
+                            <span>Choose Plan in Workout Plan</span>
+                          </Button>
+                        </Link>
+                      </div>
                     </>
                   )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            );
+          })()}
         </div>
       </section>
 
@@ -498,44 +592,51 @@ export function DashboardContent({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-7 gap-2 text-center">
-            {[
-              { day: "Mon", morning: true, evening: true },
-              { day: "Tue", morning: true, evening: true },
-              { day: "Wed", morning: true, evening: false },
-              { day: "Thu", morning: true, evening: true },
-              { day: "Fri", morning: true, evening: true },
-              { day: "Sat", morning: true, evening: false, today: true },
-              { day: "Sun", morning: false, evening: false },
-            ].map((d) => (
-              <div
-                key={d.day}
-                className={`rounded-xl p-2.5 border transition-all ${
-                  d.today
-                    ? "border-emerald-500 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-500"
-                    : "border-slate-100 bg-slate-50/60"
-                }`}
-              >
-                <span className={`block text-xs font-bold ${d.today ? "text-emerald-900" : "text-slate-700"}`}>
-                  {d.day}
-                </span>
-                <div className="mt-2 flex justify-center gap-1">
-                  <span
-                    title={d.morning ? "Morning Session Completed" : "Morning Session Pending"}
-                    className={`h-2.5 w-2.5 rounded-full ${
-                      d.morning ? "bg-amber-500" : "bg-slate-200"
+          {(() => {
+            const defaultWeeklyDays = [
+              { day: "Mon", date: "", morning: false, evening: false, isToday: false },
+              { day: "Tue", date: "", morning: false, evening: false, isToday: false },
+              { day: "Wed", date: "", morning: false, evening: false, isToday: false },
+              { day: "Thu", date: "", morning: false, evening: false, isToday: false },
+              { day: "Fri", date: "", morning: false, evening: false, isToday: false },
+              { day: "Sat", date: "", morning: false, evening: false, isToday: false },
+              { day: "Sun", date: "", morning: false, evening: false, isToday: false },
+            ];
+            const weeklyDays = initialData?.weeklyActivity || defaultWeeklyDays;
+
+            return (
+              <div className="grid grid-cols-7 gap-2 text-center" id="weekly-activity-grid">
+                {weeklyDays.map((d) => (
+                  <div
+                    key={d.day}
+                    className={`rounded-xl p-2.5 border transition-all ${
+                      d.isToday
+                        ? "border-emerald-500 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-500"
+                        : "border-slate-100 bg-slate-50/60"
                     }`}
-                  />
-                  <span
-                    title={d.evening ? "Evening Session Completed" : "Evening Session Pending"}
-                    className={`h-2.5 w-2.5 rounded-full ${
-                      d.evening ? "bg-sky-500" : "bg-slate-200"
-                    }`}
-                  />
-                </div>
+                  >
+                    <span className={`block text-xs font-bold ${d.isToday ? "text-emerald-900" : "text-slate-700"}`}>
+                      {d.day}
+                    </span>
+                    <div className="mt-2 flex justify-center gap-1">
+                      <span
+                        title={d.morning ? `${d.day} Morning Session Completed` : `${d.day} Morning Session Pending`}
+                        className={`h-2.5 w-2.5 rounded-full ${
+                          d.morning ? "bg-amber-500" : "bg-slate-200"
+                        }`}
+                      />
+                      <span
+                        title={d.evening ? `${d.day} Evening Session Completed` : `${d.day} Evening Session Pending`}
+                        className={`h-2.5 w-2.5 rounded-full ${
+                          d.evening ? "bg-sky-500" : "bg-slate-200"
+                        }`}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })()}
           <div className="mt-3 flex items-center justify-center gap-6 text-[11px] text-slate-500">
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-amber-500" /> Morning Session Done
