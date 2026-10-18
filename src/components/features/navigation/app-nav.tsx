@@ -22,7 +22,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", id: "nav-dashboard", icon: LayoutDashboard },
-  { name: "Routines", href: "/routines", id: "nav-routines", icon: Dumbbell },
+  { name: "Workout Plan", href: "/routines", id: "nav-routines", icon: Dumbbell },
   { name: "Exercises", href: "/exercises", id: "nav-exercises", icon: BookOpen },
   { name: "Calendar", href: "/calendar", id: "nav-calendar", icon: Calendar },
   { name: "Progress", href: "/progress", id: "nav-progress", icon: TrendingUp },

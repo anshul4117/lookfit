@@ -6,6 +6,7 @@ import {
   createRoutineSchema,
   updateRoutineSchema,
   archiveRoutineSchema,
+  adoptPrebuiltRoutineSchema,
   type CreateRoutineInput,
   type UpdateRoutineInput,
   type SessionType,
@@ -385,6 +386,132 @@ export async function saveGeneratedRoutineAction(
       name: plan.routineName,
       session_type: sessionType,
       estimated_minutes: Math.round(plan.estimatedMinutes),
+      status: "active",
+      exercises: exercisePayload,
+    });
+  } catch (err) {
+    const sanitized = sanitizeError(err);
+    return createErrorResult(
+      sanitized.code,
+      sanitized.message,
+      sanitized.details
+    );
+  }
+}
+
+/**
+ * Adopts a curated pre-built Morning or Evening routine blueprint for the user.
+ *
+ * Guarantees:
+ * - If no active routine of this session type exists, creates Version 1 via createRoutineAction.
+ * - If an active routine of this session type exists with the same blueprint, returns it idempotently without duplicates.
+ * - If an active routine of this session type exists with different exercises/name, updates it to Version N + 1 via updateRoutineAction.
+ * - Validates session ownership under PostgreSQL RLS.
+ */
+export async function adoptPrebuiltRoutineAction(
+  rawInput: unknown
+): Promise<ActionResult<RoutineRecord>> {
+  const parsed = adoptPrebuiltRoutineSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    const actionError = fromZodError(parsed.error);
+    return createErrorResult(
+      actionError.code,
+      actionError.message,
+      actionError.details
+    );
+  }
+
+  const { session_type } = parsed.data;
+
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return createErrorResult("UNAUTHENTICATED", "Authentication required");
+    }
+
+    const { getPrebuiltBlueprint } = await import(
+      "@/lib/domain/prebuilt-routines"
+    );
+    const blueprint = getPrebuiltBlueprint(session_type);
+
+    // Fetch active exercise IDs matching blueprint slugs
+    const slugs = blueprint.exercises.map((e) => e.slug);
+    const { data: exercisesData, error: exercisesError } = await supabase
+      .from("exercises")
+      .select("id, slug")
+      .in("slug", slugs)
+      .eq("is_active", true);
+
+    if (exercisesError) {
+      const sanitized = sanitizeError(exercisesError);
+      return createErrorResult(
+        sanitized.code,
+        sanitized.message,
+        sanitized.details
+      );
+    }
+
+    const slugToId = new Map((exercisesData || []).map((e) => [e.slug, e.id]));
+    const missingSlugs = slugs.filter((slug) => !slugToId.has(slug));
+    if (missingSlugs.length > 0) {
+      return createErrorResult(
+        "INTERNAL_ERROR",
+        `Missing active catalog exercises for pre-built routine: ${missingSlugs.join(", ")}`
+      );
+    }
+
+    const exercisePayload = blueprint.exercises.map((item) => ({
+      exercise_id: slugToId.get(item.slug)!,
+      position: item.position,
+      prescribed_sets: item.prescribedSets,
+      prescribed_reps: item.prescribedReps,
+      prescribed_duration_seconds: item.prescribedDurationSeconds,
+      rest_seconds: item.restSeconds,
+    }));
+
+    // Check if an active routine of this session type already exists
+    const { data: existingActive } = await supabase
+      .from("routines")
+      .select("*, routine_exercises(id)")
+      .eq("user_id", user.id)
+      .eq("session_type", session_type)
+      .eq("status", "active")
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingActive) {
+      // Idempotency check: if existing routine already has the exact same name and exercise count, return it
+      const existingExerciseCount = Array.isArray(existingActive.routine_exercises)
+        ? existingActive.routine_exercises.length
+        : 0;
+      if (
+        existingActive.name === blueprint.name &&
+        existingExerciseCount === blueprint.exercises.length
+      ) {
+        const { routine_exercises: _routine_exercises, ...cleanRoutine } = existingActive;
+        return createSuccessResult(cleanRoutine as RoutineRecord);
+      }
+
+      // Update to version N + 1
+      return updateRoutineAction({
+        id: existingActive.id,
+        name: blueprint.name,
+        estimated_minutes: blueprint.estimatedMinutes,
+        exercises: exercisePayload,
+      });
+    }
+
+    // Create new Version 1
+    return createRoutineAction({
+      name: blueprint.name,
+      session_type: session_type,
+      estimated_minutes: blueprint.estimatedMinutes,
       status: "active",
       exercises: exercisePayload,
     });

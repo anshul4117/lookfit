@@ -179,3 +179,14 @@ export const archiveRoutineSchema = z
   .strict();
 
 export type ArchiveRoutineInput = z.infer<typeof archiveRoutineSchema>;
+
+/**
+ * Schema for adopting a pre-built routine blueprint.
+ */
+export const adoptPrebuiltRoutineSchema = z
+  .object({
+    session_type: sessionTypeEnum,
+  })
+  .strict();
+
+export type AdoptPrebuiltRoutineInput = z.infer<typeof adoptPrebuiltRoutineSchema>;
