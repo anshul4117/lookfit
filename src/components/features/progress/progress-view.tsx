@@ -61,6 +61,7 @@ export function ProgressView({ initialData, error }: ProgressViewProps = {}) {
   const [newNotes, setNewNotes] = React.useState("");
   const [showAddForm, setShowAddForm] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const isSubmittingRef = React.useRef(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   // Synchronize local measurements state when initialData changes from server revalidation
@@ -112,22 +113,32 @@ export function ProgressView({ initialData, error }: ProgressViewProps = {}) {
 
   const handleAddMeasurement = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newNotes && !newWeight) return;
+    if (isSubmitting || isSubmittingRef.current) return;
 
+    const trimmedNotes = newNotes.trim();
     const parsedWeight = newWeight ? parseFloat(newWeight) : null;
-    const notesValue = newNotes || "Daily alignment check-in.";
 
+    if (!trimmedNotes && (parsedWeight === null || isNaN(parsedWeight))) {
+      return;
+    }
+
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      const res = await createMeasurementAction({
+      const payload: { weight_kg?: number | null; notes?: string } = {
         weight_kg: parsedWeight,
-        notes: notesValue,
-      });
+      };
+      if (trimmedNotes) {
+        payload.notes = trimmedNotes;
+      }
+
+      const res = await createMeasurementAction(payload);
 
       if (!res.success) {
         setSubmitError(res.error.message);
+        isSubmittingRef.current = false;
         setIsSubmitting(false);
         return;
       }
@@ -136,12 +147,13 @@ export function ProgressView({ initialData, error }: ProgressViewProps = {}) {
         id: res.data.id,
         date: res.data.measured_at.split("T")[0],
         weightKg: res.data.weight_kg ? Number(res.data.weight_kg) : undefined,
-        notes: res.data.notes || notesValue,
+        notes: res.data.notes || "Daily alignment check-in.",
       };
 
       setMeasurements((prev) => [savedRecord, ...prev]);
       setNewWeight("");
       setNewNotes("");
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
       setShowAddForm(false);
       router.refresh();
@@ -149,6 +161,7 @@ export function ProgressView({ initialData, error }: ProgressViewProps = {}) {
       setSubmitError(
         "Failed to save measurement check-in. Please check your connection and try again."
       );
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -479,7 +492,6 @@ export function ProgressView({ initialData, error }: ProgressViewProps = {}) {
                     value={newNotes}
                     onChange={(e) => setNewNotes(e.target.value)}
                     className="text-xs h-9 bg-white"
-                    required
                   />
                 </div>
               </div>
@@ -495,6 +507,7 @@ export function ProgressView({ initialData, error }: ProgressViewProps = {}) {
                   size="sm"
                   className="h-8 text-xs"
                   onClick={() => setShowAddForm(false)}
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </Button>

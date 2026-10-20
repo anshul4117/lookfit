@@ -205,7 +205,127 @@ describe("ProgressView Component UI & Data Integrity Tests", () => {
     expect(screen.getByText("Shoulders feel loose and natural")).toBeInTheDocument();
   });
 
-  it("handles measurement action failure gracefully and does NOT append local-only records", async () => {
+  it("submits a weight-only measurement successfully without notes", async () => {
+    (createMeasurementAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: {
+        id: "meas-weight-1",
+        user_id: "user-1",
+        weight_kg: 72.4,
+        height_cm: null,
+        notes: null,
+        measured_at: "2026-10-20T17:00:00Z",
+        created_at: "2026-10-20T17:00:00Z",
+      },
+    });
+
+    render(<ProgressView initialData={{
+      kpis: { completedSessions: 0, currentStreak: 0, totalMobilityMinutes: 0, activeDays: 0 },
+      weeklyData: [],
+      monthlyTrend: [],
+      measurements: [],
+    }} />);
+
+    // Open add form
+    const toggleButton = screen.getByRole("button", { name: /Add Note/i });
+    fireEvent.click(toggleButton);
+
+    const weightInput = screen.getByLabelText(/Optional Weight/i);
+    fireEvent.change(weightInput, { target: { value: "72.4" } });
+
+    // Submit without notes
+    const saveButton = screen.getByRole("button", { name: /Save Note/i });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(createMeasurementAction).toHaveBeenCalledWith({
+        weight_kg: 72.4,
+      });
+      expect(mockRefresh).toHaveBeenCalledTimes(1);
+    });
+
+    expect(screen.getByText("2026-10-20")).toBeInTheDocument();
+    expect(screen.getByText("72.4 kg")).toBeInTheDocument();
+  });
+
+  it("does not dispatch server action when both weight and notes are empty", async () => {
+    render(<ProgressView initialData={{
+      kpis: { completedSessions: 0, currentStreak: 0, totalMobilityMinutes: 0, activeDays: 0 },
+      weeklyData: [],
+      monthlyTrend: [],
+      measurements: [],
+    }} />);
+
+    // Open add form
+    const toggleButton = screen.getByRole("button", { name: /Add Note/i });
+    fireEvent.click(toggleButton);
+
+    // Click save with empty fields
+    const saveButton = screen.getByRole("button", { name: /Save Note/i });
+    fireEvent.click(saveButton);
+
+    // createMeasurementAction should NOT be called
+    expect(createMeasurementAction).not.toHaveBeenCalled();
+    expect(screen.getByText(/No Check-ins Logged Yet/i)).toBeInTheDocument();
+  });
+
+  it("ignores repeated submissions during an in-flight request to prevent duplicate server calls", async () => {
+    let resolveAction!: (val: unknown) => void;
+    const pendingPromise = new Promise((resolve) => {
+      resolveAction = resolve;
+    });
+
+    (createMeasurementAction as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => pendingPromise);
+
+    render(<ProgressView initialData={{
+      kpis: { completedSessions: 0, currentStreak: 0, totalMobilityMinutes: 0, activeDays: 0 },
+      weeklyData: [],
+      monthlyTrend: [],
+      measurements: [],
+    }} />);
+
+    // Open form and fill values
+    const toggleButton = screen.getByRole("button", { name: /Add Note/i });
+    fireEvent.click(toggleButton);
+
+    const notesInput = screen.getByLabelText(/Posture & Alignment Notes/i);
+    fireEvent.change(notesInput, { target: { value: "Testing re-entrancy protection" } });
+
+    const form = screen.getByText(/Log New Posture Check-in/i).closest("form")!;
+    const saveButton = screen.getByRole("button", { name: /Save Note/i });
+
+    // First submit
+    fireEvent.click(saveButton);
+    expect(createMeasurementAction).toHaveBeenCalledTimes(1);
+
+    // Repeated submissions while in-flight
+    fireEvent.submit(form);
+    fireEvent.click(saveButton);
+    expect(createMeasurementAction).toHaveBeenCalledTimes(1);
+
+    // Now resolve the in-flight request
+    resolveAction({
+      success: true,
+      data: {
+        id: "meas-in-flight-1",
+        user_id: "user-1",
+        weight_kg: null,
+        height_cm: null,
+        notes: "Testing re-entrancy protection",
+        measured_at: "2026-10-20T17:00:00Z",
+        created_at: "2026-10-20T17:00:00Z",
+      },
+    });
+
+    await waitFor(() => {
+      expect(mockRefresh).toHaveBeenCalledTimes(1);
+    });
+
+    expect(createMeasurementAction).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Testing re-entrancy protection")).toBeInTheDocument();
+  });
+
+  it("handles measurement action failure gracefully, does NOT append local records, and preserves user input", async () => {
     (createMeasurementAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       success: false,
       error: {
@@ -225,8 +345,11 @@ describe("ProgressView Component UI & Data Integrity Tests", () => {
     const toggleButton = screen.getByRole("button", { name: /Add Note/i });
     fireEvent.click(toggleButton);
 
+    const weightInput = screen.getByLabelText(/Optional Weight/i);
     const notesInput = screen.getByLabelText(/Posture & Alignment Notes/i);
-    fireEvent.change(notesInput, { target: { value: "Testing failure" } });
+
+    fireEvent.change(weightInput, { target: { value: "68.5" } });
+    fireEvent.change(notesInput, { target: { value: "Testing failure persistence" } });
 
     const saveButton = screen.getByRole("button", { name: /Save Note/i });
     fireEvent.click(saveButton);
@@ -238,6 +361,10 @@ describe("ProgressView Component UI & Data Integrity Tests", () => {
 
     // Verify NO fake local record is in the table; empty state remains
     expect(screen.getByText(/No Check-ins Logged Yet/i)).toBeInTheDocument();
-    expect(screen.queryByText("Testing failure")).not.toBeInTheDocument();
+    expect(screen.queryByText("Testing failure persistence")).not.toBeInTheDocument();
+
+    // Verify user input is preserved and not wiped on error
+    expect(weightInput).toHaveValue(68.5);
+    expect(notesInput).toHaveValue("Testing failure persistence");
   });
 });

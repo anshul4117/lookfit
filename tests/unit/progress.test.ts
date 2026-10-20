@@ -94,6 +94,50 @@ describe("createMeasurementAction", () => {
     }
     expect(revalidatePath).toHaveBeenCalledWith("/progress");
   });
+
+  it("successfully creates weight-only measurement record and revalidates cache", async () => {
+    const mockRecord = {
+      id: "meas-weight-only",
+      user_id: USER_ID,
+      weight_kg: 71.5,
+      height_cm: null,
+      notes: null,
+      measured_at: "2026-10-18T10:00:00Z",
+      created_at: "2026-10-18T10:00:00Z",
+    };
+
+    const mockSupabase = {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: USER_ID } },
+          error: null,
+        }),
+      },
+      from: vi.fn().mockReturnValue({
+        insert: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: mockRecord,
+              error: null,
+            }),
+          }),
+        }),
+      }),
+    };
+
+    (createClient as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockSupabase);
+
+    const result = await createMeasurementAction({
+      weight_kg: 71.5,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.weight_kg).toBe(71.5);
+      expect(result.data.notes).toBeNull();
+    }
+    expect(revalidatePath).toHaveBeenCalledWith("/progress");
+  });
 });
 
 describe("getProgressDataQuery", () => {
