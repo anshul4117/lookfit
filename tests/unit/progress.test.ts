@@ -94,6 +94,50 @@ describe("createMeasurementAction", () => {
     }
     expect(revalidatePath).toHaveBeenCalledWith("/progress");
   });
+
+  it("successfully creates weight-only measurement record and revalidates cache", async () => {
+    const mockRecord = {
+      id: "meas-weight-only",
+      user_id: USER_ID,
+      weight_kg: 71.5,
+      height_cm: null,
+      notes: null,
+      measured_at: "2026-10-18T10:00:00Z",
+      created_at: "2026-10-18T10:00:00Z",
+    };
+
+    const mockSupabase = {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: USER_ID } },
+          error: null,
+        }),
+      },
+      from: vi.fn().mockReturnValue({
+        insert: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: mockRecord,
+              error: null,
+            }),
+          }),
+        }),
+      }),
+    };
+
+    (createClient as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockSupabase);
+
+    const result = await createMeasurementAction({
+      weight_kg: 71.5,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.weight_kg).toBe(71.5);
+      expect(result.data.notes).toBeNull();
+    }
+    expect(revalidatePath).toHaveBeenCalledWith("/progress");
+  });
 });
 
 describe("getProgressDataQuery", () => {
@@ -379,6 +423,85 @@ describe("getProgressDataQuery", () => {
         morning: 0,
         evening: 0,
       });
+    }
+  });
+
+  it("returns honest zero statistics, empty weekly data, and empty measurements for a new user with zero records", async () => {
+    setupMockSupabase({
+      timezone: "Asia/Kolkata",
+      sessions: [],
+      measurements: [],
+    });
+
+    const result = await getProgressDataQuery();
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.kpis).toEqual({
+        completedSessions: 0,
+        currentStreak: 0,
+        totalMobilityMinutes: 0,
+        activeDays: 0,
+      });
+
+      expect(result.data.weeklyData).toHaveLength(7);
+      for (const day of result.data.weeklyData) {
+        expect(day.morning).toBe(0);
+        expect(day.evening).toBe(0);
+      }
+
+      expect(result.data.monthlyTrend).toHaveLength(4);
+      for (const week of result.data.monthlyTrend) {
+        expect(week.sessions).toBe(0);
+        expect(week.minutes).toBe(0);
+      }
+
+      expect(result.data.measurements).toEqual([]);
+    }
+  });
+
+  it("propagates database query failures gracefully with sanitized error", async () => {
+    const mockSupabase = {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: USER_ID } },
+          error: null,
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "profiles") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { timezone: "Asia/Kolkata" },
+              error: null,
+            }),
+          };
+        }
+        if (table === "workout_sessions") {
+          const b: Record<string, unknown> = {};
+          b.select = vi.fn().mockReturnValue(b);
+          b.eq = vi.fn().mockReturnValue(b);
+          b.order = vi.fn().mockReturnValue(b);
+          b.then = (resolve: (arg: unknown) => void) => {
+            resolve({
+              data: null,
+              error: { code: "42P01", message: 'relation "workout_sessions" does not exist' },
+            });
+          };
+          return b;
+        }
+        return { select: vi.fn().mockReturnThis() };
+      }),
+    };
+
+    (createClient as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockSupabase);
+
+    const result = await getProgressDataQuery();
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe("An unexpected error occurred. Please try again.");
     }
   });
 });
