@@ -74,7 +74,8 @@ export async function getProgressDataQuery(): Promise<ActionResult<ProgressData>
       .select("id, activity_date, duration_seconds, session_type, completed_at")
       .eq("user_id", user.id)
       .eq("status", "completed")
-      .order("activity_date", { ascending: false });
+      .order("activity_date", { ascending: false })
+      .order("completed_at", { ascending: false });
 
     if (sessionsError) {
       const sanitized = sanitizeError(sessionsError);

@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getProgressDataQuery } from "@/server/queries/progress";
 import { ProgressView } from "@/components/features/progress/progress-view";
 
@@ -10,7 +11,21 @@ export const metadata: Metadata = {
 
 export default async function ProgressPage() {
   const result = await getProgressDataQuery();
-  const progressData = result.success ? result.data : null;
 
-  return <ProgressView initialData={progressData} />;
+  if (!result.success) {
+    if (result.error.code === "UNAUTHENTICATED") {
+      redirect("/login");
+    }
+
+    return (
+      <ProgressView
+        error={
+          result.error.message ||
+          "Unable to load progress data. Please check your connection and try again."
+        }
+      />
+    );
+  }
+
+  return <ProgressView initialData={result.data} />;
 }
